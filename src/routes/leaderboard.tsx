@@ -351,31 +351,60 @@ function RankingTable({ rows, loading, currentUserId, emptyText }: { rows: RankR
 }
 
 function StreakBanner({ userId }: { userId: string }) {
+  const { isPremium } = usePremium();
   const [comps, setComps] = useState<CompletionRow[] | null>(null);
+  const [sub, setSub] = useState<{ last_streak_revive_at: string | null; current_period_end: string | null } | null>(null);
   const [now, setNow] = useState(() => new Date());
+  const [reviving, setReviving] = useState(false);
+
+  const loadAll = async () => {
+    const [{ data: c }, { data: s }] = await Promise.all([
+      supabase.from("quest_completions").select("created_at, difficulty, points").eq("user_id", userId).order("created_at", { ascending: false }).limit(100),
+      supabase.from("subscribers").select("last_streak_revive_at, current_period_end").eq("user_id", userId).maybeSingle(),
+    ]);
+    setComps((c ?? []) as CompletionRow[]);
+    setSub((s as typeof sub) ?? { last_streak_revive_at: null, current_period_end: null });
+  };
 
   useEffect(() => {
     let alive = true;
-    const load = async () => {
-      const { data } = await supabase
-        .from("quest_completions")
-        .select("created_at, difficulty, points")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (alive) setComps((data ?? []) as CompletionRow[]);
-    };
-    load();
-    const handler = () => load();
+    loadAll().then(() => { if (!alive) return; });
+    const handler = () => loadAll();
     window.addEventListener("completions:refresh", handler);
     const tick = setInterval(() => setNow(new Date()), 1000);
     return () => { alive = false; window.removeEventListener("completions:refresh", handler); clearInterval(tick); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   if (!comps) return null;
   const streak = computeStreak(comps, now);
   const best = bestEverStreak(comps);
   const nextMult = streakMultiplier(streak.alive ? streak.count + 1 : 1);
+
+  // Revive eligibility: premium + dead streak + had a previous streak + not used this period.
+  const periodEnd = sub?.current_period_end ? new Date(sub.current_period_end) : null;
+  const periodStart = periodEnd ? new Date(periodEnd.getTime() - 31 * 24 * 60 * 60 * 1000) : null;
+  const lastRevive = sub?.last_streak_revive_at ? new Date(sub.last_streak_revive_at) : null;
+  const reviveUsedThisPeriod = !!(lastRevive && periodStart && lastRevive >= periodStart);
+  const canRevive = isPremium && !streak.alive && comps.length > 0 && !reviveUsedThisPeriod;
+
+  const revive = async () => {
+    if (!canRevive || !comps.length) return;
+    setReviving(true);
+    // Insert a placeholder completion 71h after the most recent one so the streak chain stays intact.
+    const lastTs = Math.max(...comps.map((c) => new Date(c.created_at).getTime()));
+    const bridgeAt = new Date(lastTs + (STREAK_WINDOW_MS - 60 * 60 * 1000)).toISOString();
+    const { error: insErr } = await supabase.from("quest_completions").insert({
+      user_id: userId, title: "🛟 Streak revive", difficulty: "easy", points: 0, created_at: bridgeAt,
+    });
+    if (insErr) { setReviving(false); toast.error(insErr.message); return; }
+    const { error: subErr } = await supabase.from("subscribers").update({ last_streak_revive_at: new Date().toISOString() }).eq("user_id", userId);
+    if (subErr) { setReviving(false); toast.error(subErr.message); return; }
+    toast.success("Streak revived! 🛟🔥");
+    setReviving(false);
+    await loadAll();
+    window.dispatchEvent(new Event("completions:refresh"));
+  };
 
   return (
     <div className="bento-card p-5 mb-6 flex items-center gap-5 flex-wrap">
@@ -400,7 +429,32 @@ function StreakBanner({ userId }: { userId: string }) {
         <p className="text-xs uppercase tracking-wider text-muted-foreground mb-0.5">Next quest bonus</p>
         <p className="text-2xl font-bold text-primary">{nextMult.toFixed(2)}×</p>
       </div>
+      {!streak.alive && comps.length > 0 && (
+        <div className="w-full mt-2 pt-4 border-t border-border flex items-center justify-between gap-3 flex-wrap">
+          <div className="text-sm">
+            <p className="font-semibold inline-flex items-center gap-2"><Sparkles className="size-4 text-primary" /> Premium perk: Streak Revive</p>
+            <p className="text-xs text-muted-foreground">
+              {isPremium
+                ? reviveUsedThisPeriod
+                  ? `Already used this period${periodEnd ? ` — refreshes ${periodEnd.toLocaleDateString()}` : ""}.`
+                  : "Bring your last streak back to life. One revive per billing period."
+                : "Upgrade to Premium to revive a lost streak once per billing period."}
+            </p>
+          </div>
+          {isPremium ? (
+            <button onClick={revive} disabled={!canRevive || reviving}
+              className="rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-5 py-2 text-sm font-semibold disabled:opacity-50 inline-flex items-center gap-2">
+              <Flame className="size-4" /> {reviving ? "Reviving…" : "Revive streak"}
+            </button>
+          ) : (
+            <Link to="/pricing" className="rounded-full border border-primary text-primary px-5 py-2 text-sm font-semibold hover:bg-primary/10 transition">
+              Upgrade
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   );
 }
+
 
