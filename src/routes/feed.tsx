@@ -146,10 +146,13 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
     setUploading(true);
     try {
       const urls: string[] = [];
-      for (const f of files) {
-        const ext = f.name.split(".").pop() ?? "jpg";
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        const rot = rotations[i] ?? 0;
+        const toUpload = rot === 0 ? f : await rotateImageFile(f, rot);
+        const ext = (toUpload.name.split(".").pop() ?? "jpg").toLowerCase();
         const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from("post-images").upload(path, f, { contentType: f.type });
+        const { error: upErr } = await supabase.storage.from("post-images").upload(path, toUpload, { contentType: toUpload.type });
         if (upErr) throw upErr;
         const { data } = supabase.storage.from("post-images").getPublicUrl(path);
         urls.push(data.publicUrl);
@@ -162,7 +165,7 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
         points: questFields?.points ?? null,
       });
       if (error) throw error;
-      setCaption(""); setFiles([]); setIsQuest(false); setDifficulty("medium"); setPoints("25");
+      setCaption(""); setFiles([]); setRotations([]); setIsQuest(false); setDifficulty("medium"); setPoints("25");
       if (fileRef.current) fileRef.current.value = "";
       toast.success("Posted!");
       onPosted();
