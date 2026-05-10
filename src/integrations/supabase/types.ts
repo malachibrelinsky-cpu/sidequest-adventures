@@ -53,6 +53,56 @@ export type Database = {
           },
         ]
       }
+      leaderboard_members: {
+        Row: {
+          joined_at: string
+          leaderboard_id: string
+          user_id: string
+        }
+        Insert: {
+          joined_at?: string
+          leaderboard_id: string
+          user_id: string
+        }
+        Update: {
+          joined_at?: string
+          leaderboard_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leaderboard_members_leaderboard_id_fkey"
+            columns: ["leaderboard_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leaderboards: {
+        Row: {
+          created_at: string
+          id: string
+          invite_code: string
+          name: string
+          owner_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invite_code?: string
+          name: string
+          owner_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invite_code?: string
+          name?: string
+          owner_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           body: string
@@ -148,6 +198,36 @@ export type Database = {
         }
         Relationships: []
       }
+      quest_completions: {
+        Row: {
+          created_at: string
+          difficulty: string
+          id: string
+          notes: string | null
+          points: number
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          difficulty: string
+          id?: string
+          notes?: string | null
+          points: number
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          difficulty?: string
+          id?: string
+          notes?: string | null
+          points?: number
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscribers: {
         Row: {
           created_at: string
@@ -189,7 +269,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_leaderboard_member: {
+        Args: { _lb: string; _user: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
