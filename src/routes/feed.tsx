@@ -434,6 +434,47 @@ function PostCard({ post, onChange, currentUserId }: { post: Post; onChange: () 
           </div>
         )}
       </div>
+      {isQuest && (post.participants_needed != null || post.quest_time || post.location) && (
+        <div className="mx-4 mb-2 rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-accent/10 p-4 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            {post.participants_needed != null && (
+              <div className="flex items-center gap-2">
+                <Users className="size-4 text-primary shrink-0" />
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Crew</p>
+                  <p className="font-semibold">{participants.length} / {post.participants_needed}</p>
+                </div>
+              </div>
+            )}
+            {post.quest_time && (
+              <div className="flex items-center gap-2">
+                <Clock className="size-4 text-primary shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">When</p>
+                  <p className="font-semibold truncate">{new Date(post.quest_time).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</p>
+                </div>
+              </div>
+            )}
+            {post.location && (
+              <div className="flex items-center gap-2">
+                <MapPin className="size-4 text-primary shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Where</p>
+                  <p className="font-semibold truncate">{post.location}</p>
+                </div>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={acceptQuest}
+            disabled={accepting || (full && !joined)}
+            className="w-full rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground py-2.5 font-semibold text-sm disabled:opacity-50 hover:opacity-90 transition inline-flex items-center justify-center gap-2"
+          >
+            <Trophy className="size-4" />
+            {joined ? "Open group chat" : full ? "Quest full" : accepting ? "Accepting…" : "Accept Quest"}
+          </button>
+        </div>
+      )}
       {post.image_urls.length > 0 && (
         <div className={`grid gap-1 ${post.image_urls.length === 1 ? "" : post.image_urls.length === 2 ? "grid-cols-2" : "grid-cols-2"}`}>
           {post.image_urls.map((url, i) => (
