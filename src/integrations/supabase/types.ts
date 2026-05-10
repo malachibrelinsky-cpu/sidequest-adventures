@@ -131,22 +131,28 @@ export type Database = {
         Row: {
           caption: string | null
           created_at: string
+          difficulty: string | null
           id: string
           image_urls: string[]
+          points: number | null
           user_id: string
         }
         Insert: {
           caption?: string | null
           created_at?: string
+          difficulty?: string | null
           id?: string
           image_urls?: string[]
+          points?: number | null
           user_id: string
         }
         Update: {
           caption?: string | null
           created_at?: string
+          difficulty?: string | null
           id?: string
           image_urls?: string[]
+          points?: number | null
           user_id?: string
         }
         Relationships: [

@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
-import { Heart, MessageCircle, Image as ImageIcon, Send } from "lucide-react";
+import { Heart, MessageCircle, Image as ImageIcon, Send, Trophy } from "lucide-react";
 import { z } from "zod";
 
 export const Route = createFileRoute("/feed")({
@@ -12,12 +12,23 @@ export const Route = createFileRoute("/feed")({
   component: FeedPage,
 });
 
+const DIFFICULTIES = ["easy", "medium", "hard", "epic"] as const;
+type Difficulty = typeof DIFFICULTIES[number];
+const DIFFICULTY_DEFAULTS: Record<Difficulty, number> = { easy: 10, medium: 25, hard: 60, epic: 150 };
+const DIFFICULTY_STYLE: Record<Difficulty, string> = {
+  easy: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  medium: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+  hard: "bg-orange-500/15 text-orange-400 border-orange-500/30",
+  epic: "bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30",
+};
+
 type Profile = { id: string; display_name: string; avatar_url: string | null };
 type Comment = { id: string; body: string; created_at: string; user_id: string; profiles: Profile | null };
-type Post = { id: string; caption: string | null; image_urls: string[]; created_at: string; user_id: string; profiles: Profile | null; comments: Comment[] };
+type Post = { id: string; caption: string | null; image_urls: string[]; created_at: string; user_id: string; difficulty: Difficulty | null; points: number | null; profiles: Profile | null; comments: Comment[] };
 
 const captionSchema = z.string().trim().max(500);
 const commentSchema = z.string().trim().min(1).max(1000);
+const pointsSchema = z.number().int().min(0).max(500);
 
 function FeedPage() {
   const { user, loading } = useAuth();
@@ -30,7 +41,7 @@ function FeedPage() {
   const load = async () => {
     const { data, error } = await supabase
       .from("posts")
-      .select("id, caption, image_urls, created_at, user_id, profiles!posts_user_id_fkey(id, display_name, avatar_url), comments(id, body, created_at, user_id, profiles!comments_user_id_fkey(id, display_name, avatar_url))")
+      .select("id, caption, image_urls, created_at, user_id, difficulty, points, profiles!posts_user_id_fkey(id, display_name, avatar_url), comments(id, body, created_at, user_id, profiles!comments_user_id_fkey(id, display_name, avatar_url))")
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) { toast.error(error.message); return; }
@@ -75,6 +86,9 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
   const [caption, setCaption] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [isQuest, setIsQuest] = useState(false);
+  const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  const [points, setPoints] = useState<string>("25");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,11 +96,22 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
     setFiles(picked);
   };
 
+  const pickDifficulty = (d: Difficulty) => {
+    setDifficulty(d);
+    setPoints(String(DIFFICULTY_DEFAULTS[d]));
+  };
+
   const submit = async () => {
     if (!user) return;
     if (files.length === 0) { toast.error("Add at least one photo"); return; }
     const cap = captionSchema.safeParse(caption);
     if (!cap.success) { toast.error("Caption too long"); return; }
+    let questFields: { difficulty: Difficulty; points: number } | null = null;
+    if (isQuest) {
+      const parsed = pointsSchema.safeParse(Number(points));
+      if (!parsed.success) { toast.error("Points must be a whole number from 0 to 500"); return; }
+      questFields = { difficulty, points: parsed.data };
+    }
     setUploading(true);
     try {
       const urls: string[] = [];
@@ -98,9 +123,15 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
         const { data } = supabase.storage.from("post-images").getPublicUrl(path);
         urls.push(data.publicUrl);
       }
-      const { error } = await supabase.from("posts").insert({ user_id: user.id, caption: caption.trim() || null, image_urls: urls });
+      const { error } = await supabase.from("posts").insert({
+        user_id: user.id,
+        caption: caption.trim() || null,
+        image_urls: urls,
+        difficulty: questFields?.difficulty ?? null,
+        points: questFields?.points ?? null,
+      });
       if (error) throw error;
-      setCaption(""); setFiles([]);
+      setCaption(""); setFiles([]); setIsQuest(false); setDifficulty("medium"); setPoints("25");
       if (fileRef.current) fileRef.current.value = "";
       toast.success("Posted!");
       onPosted();
@@ -126,6 +157,40 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
           ))}
         </div>
       )}
+
+      <div className="mt-3 pt-3 border-t border-border">
+        <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+          <input type="checkbox" checked={isQuest} onChange={(e) => setIsQuest(e.target.checked)}
+            className="size-4 rounded border-border accent-primary" />
+          <Trophy className="size-4 text-primary" />
+          <span className="font-semibold">Post as a sidequest others can join</span>
+        </label>
+
+        {isQuest && (
+          <div className="mt-3 space-y-3 rounded-xl bg-input/20 border border-border p-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Difficulty</p>
+              <div className="grid grid-cols-4 gap-2">
+                {DIFFICULTIES.map((d) => (
+                  <button key={d} type="button" onClick={() => pickDifficulty(d)}
+                    className={`rounded-lg border px-2 py-2 text-xs font-semibold capitalize transition ${difficulty === d ? `${DIFFICULTY_STYLE[d]}` : "border-border text-muted-foreground hover:border-primary/50"}`}>
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">
+                Point worth <span className="opacity-60">(0–500, suggested {DIFFICULTY_DEFAULTS[difficulty]})</span>
+              </p>
+              <input type="number" min={0} max={500} value={points}
+                onChange={(e) => setPoints(e.target.value)}
+                className="w-32 rounded-lg bg-input/40 border border-border px-3 py-2 text-sm outline-none focus:border-primary" />
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
         <label className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary cursor-pointer transition">
           <ImageIcon className="size-5" /> Add photos (up to 4)
@@ -163,10 +228,17 @@ function PostCard({ post, onChange, currentUserId }: { post: Post; onChange: () 
     <article className="bento-card overflow-hidden">
       <div className="p-4 flex items-center gap-3">
         <Avatar profile={profile} />
-        <div>
+        <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm">{profile?.display_name ?? "Quester"}</p>
           <p className="text-xs text-muted-foreground">{new Date(post.created_at).toLocaleString()}</p>
         </div>
+        {post.difficulty && (
+          <div className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold capitalize ${DIFFICULTY_STYLE[post.difficulty]}`}>
+            <Trophy className="size-3.5" />
+            {post.difficulty}
+            {post.points != null && <span className="opacity-80">· {post.points} pts</span>}
+          </div>
+        )}
       </div>
       {post.image_urls.length > 0 && (
         <div className={`grid gap-1 ${post.image_urls.length === 1 ? "" : post.image_urls.length === 2 ? "grid-cols-2" : "grid-cols-2"}`}>
