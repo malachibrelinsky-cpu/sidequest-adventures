@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
-import { Heart, MessageCircle, Image as ImageIcon, Send, Trophy, Pencil, Trash2, Check, X } from "lucide-react";
+import { Heart, MessageCircle, Image as ImageIcon, Send, Trophy, Pencil, Trash2, Check, X, RotateCw, RotateCcw } from "lucide-react";
 import { z } from "zod";
 
 export const Route = createFileRoute("/feed")({
@@ -28,6 +28,40 @@ type Post = { id: string; caption: string | null; image_urls: string[]; created_
 
 const captionSchema = z.string().trim().max(150);
 const commentSchema = z.string().trim().min(1).max(1000);
+
+async function rotateImageFile(file: File, degrees: number): Promise<File> {
+  const deg = ((degrees % 360) + 360) % 360;
+  if (deg === 0) return file;
+  // Skip rasterization for SVG — keep original
+  if (file.type === "image/svg+xml") return file;
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("Could not load image for rotation"));
+      el.src = url;
+    });
+    const swap = deg === 90 || deg === 270;
+    const canvas = document.createElement("canvas");
+    canvas.width = swap ? img.naturalHeight : img.naturalWidth;
+    canvas.height = swap ? img.naturalWidth : img.naturalHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((deg * Math.PI) / 180);
+    ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+    const outType = file.type === "image/png" ? "image/png" : "image/jpeg";
+    const blob: Blob = await new Promise((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Rotation failed"))), outType, 0.92)
+    );
+    const baseName = file.name.replace(/\.[^.]+$/, "");
+    const ext = outType === "image/png" ? "png" : "jpg";
+    return new File([blob], `${baseName}.${ext}`, { type: outType });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
 const pointsSchema = z.number().int().min(0).max(150);
 
 type Tab = "all" | "quests" | "updates";
@@ -105,6 +139,7 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
   const { user } = useAuth();
   const [caption, setCaption] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const [rotations, setRotations] = useState<number[]>([]);
   const [uploading, setUploading] = useState(false);
   const [isQuest, setIsQuest] = useState(false);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
@@ -114,6 +149,16 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.target.files ?? []).slice(0, 4);
     setFiles(picked);
+    setRotations(picked.map(() => 0));
+  };
+
+  const rotate = (i: number, dir: 1 | -1) => {
+    setRotations((rs) => rs.map((r, idx) => (idx === i ? (((r + dir * 90) % 360) + 360) % 360 : r)));
+  };
+
+  const removeFile = (i: number) => {
+    setFiles((fs) => fs.filter((_, idx) => idx !== i));
+    setRotations((rs) => rs.filter((_, idx) => idx !== i));
   };
 
   const pickDifficulty = (d: Difficulty) => {
@@ -135,10 +180,13 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
     setUploading(true);
     try {
       const urls: string[] = [];
-      for (const f of files) {
-        const ext = f.name.split(".").pop() ?? "jpg";
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        const rot = rotations[i] ?? 0;
+        const toUpload = rot === 0 ? f : await rotateImageFile(f, rot);
+        const ext = (toUpload.name.split(".").pop() ?? "jpg").toLowerCase();
         const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from("post-images").upload(path, f, { contentType: f.type });
+        const { error: upErr } = await supabase.storage.from("post-images").upload(path, toUpload, { contentType: toUpload.type });
         if (upErr) throw upErr;
         const { data } = supabase.storage.from("post-images").getPublicUrl(path);
         urls.push(data.publicUrl);
@@ -151,7 +199,7 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
         points: questFields?.points ?? null,
       });
       if (error) throw error;
-      setCaption(""); setFiles([]); setIsQuest(false); setDifficulty("medium"); setPoints("25");
+      setCaption(""); setFiles([]); setRotations([]); setIsQuest(false); setDifficulty("medium"); setPoints("25");
       if (fileRef.current) fileRef.current.value = "";
       toast.success("Posted!");
       onPosted();
@@ -171,8 +219,27 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
       {files.length > 0 && (
         <div className="grid grid-cols-4 gap-2 mt-3">
           {files.map((f, i) => (
-            <div key={i} className="relative aspect-square rounded-lg overflow-hidden">
-              <img src={URL.createObjectURL(f)} alt="" className="w-full h-full object-cover" />
+            <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-muted/30 group">
+              <img
+                src={URL.createObjectURL(f)}
+                alt=""
+                className="w-full h-full object-cover transition-transform duration-200"
+                style={{ transform: `rotate(${rotations[i] ?? 0}deg)` }}
+              />
+              <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 p-1.5 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition">
+                <button type="button" onClick={() => rotate(i, -1)} title="Rotate left"
+                  className="p-1 rounded-full bg-black/60 text-white hover:bg-black/80">
+                  <RotateCcw className="size-3.5" />
+                </button>
+                <button type="button" onClick={() => rotate(i, 1)} title="Rotate right"
+                  className="p-1 rounded-full bg-black/60 text-white hover:bg-black/80">
+                  <RotateCw className="size-3.5" />
+                </button>
+                <button type="button" onClick={() => removeFile(i)} title="Remove"
+                  className="p-1 rounded-full bg-black/60 text-white hover:bg-destructive">
+                  <X className="size-3.5" />
+                </button>
+              </div>
             </div>
           ))}
         </div>
