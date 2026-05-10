@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
-import { Heart, MessageCircle, Image as ImageIcon, Send, Trophy } from "lucide-react";
+import { Heart, MessageCircle, Image as ImageIcon, Send, Trophy, Pencil, Trash2, Check, X } from "lucide-react";
 import { z } from "zod";
 
 export const Route = createFileRoute("/feed")({
@@ -231,7 +231,11 @@ function PostCard({ post, onChange, currentUserId }: { post: Post; onChange: () 
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [posting, setPosting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editCaption, setEditCaption] = useState(post.caption ?? "");
+  const [saving, setSaving] = useState(false);
   const profile = post.profiles;
+  const isOwner = post.user_id === currentUserId;
 
   const addComment = async () => {
     const parsed = commentSchema.safeParse(newComment);
@@ -241,6 +245,26 @@ function PostCard({ post, onChange, currentUserId }: { post: Post; onChange: () 
     setPosting(false);
     if (error) { toast.error(error.message); return; }
     setNewComment("");
+    onChange();
+  };
+
+  const saveCaption = async () => {
+    const parsed = captionSchema.safeParse(editCaption);
+    if (!parsed.success) { toast.error("Caption too long"); return; }
+    setSaving(true);
+    const { error } = await supabase.from("posts").update({ caption: parsed.data || null }).eq("id", post.id);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    setEditing(false);
+    toast.success("Updated");
+    onChange();
+  };
+
+  const deletePost = async () => {
+    if (!confirm("Delete this post? This can't be undone.")) return;
+    const { error } = await supabase.from("posts").delete().eq("id", post.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Deleted");
     onChange();
   };
 
@@ -259,6 +283,18 @@ function PostCard({ post, onChange, currentUserId }: { post: Post; onChange: () 
             {post.points != null && <span className="opacity-80">· {post.points} pts</span>}
           </div>
         )}
+        {isOwner && !editing && (
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={() => { setEditCaption(post.caption ?? ""); setEditing(true); }} title="Edit caption"
+              className="p-1.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition">
+              <Pencil className="size-4" />
+            </button>
+            <button onClick={deletePost} title="Delete post"
+              className="p-1.5 rounded-full hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition">
+              <Trash2 className="size-4" />
+            </button>
+          </div>
+        )}
       </div>
       {post.image_urls.length > 0 && (
         <div className={`grid gap-1 ${post.image_urls.length === 1 ? "" : post.image_urls.length === 2 ? "grid-cols-2" : "grid-cols-2"}`}>
@@ -267,7 +303,25 @@ function PostCard({ post, onChange, currentUserId }: { post: Post; onChange: () 
           ))}
         </div>
       )}
-      {post.caption && <p className="px-4 pt-4 text-sm">{post.caption}</p>}
+      {editing ? (
+        <div className="px-4 pt-4 space-y-2">
+          <textarea
+            value={editCaption} onChange={(e) => setEditCaption(e.target.value)} maxLength={150} rows={3}
+            className="w-full rounded-2xl bg-input/40 border border-border px-3 py-2 text-sm outline-none focus:border-primary resize-none"
+            placeholder="Write a caption…"
+          />
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setEditing(false)} className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold bg-muted hover:bg-muted/70 transition">
+              <X className="size-3.5" /> Cancel
+            </button>
+            <button onClick={saveCaption} disabled={saving} className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground disabled:opacity-50 hover:opacity-90 transition">
+              <Check className="size-3.5" /> {saving ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        post.caption && <p className="px-4 pt-4 text-sm">{post.caption}</p>
+      )}
       <div className="px-4 py-3 flex items-center gap-4 text-sm text-muted-foreground">
         <button className="flex items-center gap-1.5 hover:text-primary transition">
           <Heart className="size-5" />
