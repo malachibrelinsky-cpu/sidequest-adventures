@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
-import { Heart, MessageCircle, Image as ImageIcon, Send, Trophy, Pencil, Trash2, Check, X, RotateCw, RotateCcw } from "lucide-react";
+import { Heart, MessageCircle, Image as ImageIcon, Send, Trophy, Pencil, Trash2, Check, X, RotateCw, RotateCcw, Crop as CropIcon, ZoomIn, ZoomOut } from "lucide-react";
 import { z } from "zod";
 
 export const Route = createFileRoute("/feed")({
@@ -145,6 +145,13 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [points, setPoints] = useState<string>("25");
   const fileRef = useRef<HTMLInputElement>(null);
+  const [cropIndex, setCropIndex] = useState<number | null>(null);
+
+  const applyCrop = async (i: number, croppedFile: File) => {
+    setFiles((fs) => fs.map((f, idx) => (idx === i ? croppedFile : f)));
+    setRotations((rs) => rs.map((r, idx) => (idx === i ? 0 : r)));
+    setCropIndex(null);
+  };
 
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.target.files ?? []).slice(0, 4);
@@ -235,6 +242,10 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
                   className="p-1 rounded-full bg-black/60 text-white hover:bg-black/80">
                   <RotateCw className="size-3.5" />
                 </button>
+                <button type="button" onClick={() => setCropIndex(i)} title="Crop & zoom"
+                  className="p-1 rounded-full bg-black/60 text-white hover:bg-black/80">
+                  <CropIcon className="size-3.5" />
+                </button>
                 <button type="button" onClick={() => removeFile(i)} title="Remove"
                   className="p-1 rounded-full bg-black/60 text-white hover:bg-destructive">
                   <X className="size-3.5" />
@@ -243,6 +254,15 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
             </div>
           ))}
         </div>
+      )}
+
+      {cropIndex !== null && files[cropIndex] && (
+        <CropModal
+          file={files[cropIndex]}
+          rotation={rotations[cropIndex] ?? 0}
+          onCancel={() => setCropIndex(null)}
+          onApply={(out) => applyCrop(cropIndex, out)}
+        />
       )}
 
       <div className="mt-3 pt-3 border-t border-border">
@@ -432,6 +452,182 @@ function Avatar({ profile, small }: { profile: Profile | null; small?: boolean }
   return (
     <div className={`${size} rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground font-bold text-sm`}>
       {(profile?.display_name ?? "?")[0].toUpperCase()}
+    </div>
+  );
+}
+
+function CropModal({ file, rotation, onCancel, onApply }: {
+  file: File;
+  rotation: number;
+  onCancel: () => void;
+  onApply: (out: File) => void;
+}) {
+  const VP = 320;
+  const [baseFile, setBaseFile] = useState<File | null>(null);
+  const [imgUrl, setImgUrl] = useState<string | null>(null);
+  const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [saving, setSaving] = useState(false);
+  const dragRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
+
+  useEffect(() => {
+    let url: string | null = null;
+    let cancelled = false;
+    (async () => {
+      try {
+        const rotated = rotation === 0 ? file : await rotateImageFile(file, rotation);
+        if (cancelled) return;
+        url = URL.createObjectURL(rotated);
+        const img = new Image();
+        img.onload = () => {
+          if (cancelled) return;
+          setBaseFile(rotated);
+          setImgUrl(url);
+          setNatural({ w: img.naturalWidth, h: img.naturalHeight });
+          setZoom(1);
+          setOffset({ x: 0, y: 0 });
+        };
+        img.onerror = () => toast.error("Could not load image");
+        img.src = url;
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Could not prepare image");
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [file, rotation]);
+
+  const baseScale = natural ? Math.max(VP / natural.w, VP / natural.h) : 1;
+  const effScale = baseScale * zoom;
+  const renderedW = natural ? natural.w * effScale : 0;
+  const renderedH = natural ? natural.h * effScale : 0;
+  const maxOffX = Math.max(0, (renderedW - VP) / 2);
+  const maxOffY = Math.max(0, (renderedH - VP) / 2);
+
+  const clamp = (x: number, y: number) => ({
+    x: Math.max(-maxOffX, Math.min(maxOffX, x)),
+    y: Math.max(-maxOffY, Math.min(maxOffY, y)),
+  });
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    (e.target as Element).setPointerCapture(e.pointerId);
+    dragRef.current = { x: e.clientX, y: e.clientY, ox: offset.x, oy: offset.y };
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!dragRef.current) return;
+    const dx = e.clientX - dragRef.current.x;
+    const dy = e.clientY - dragRef.current.y;
+    setOffset(clamp(dragRef.current.ox + dx, dragRef.current.oy + dy));
+  };
+  const onPointerUp = () => { dragRef.current = null; };
+
+  const apply = async () => {
+    if (!baseFile || !natural || !imgUrl) return;
+    setSaving(true);
+    try {
+      const srcSizePx = VP / effScale;
+      const renderedLeft = (VP - renderedW) / 2 + offset.x;
+      const renderedTop = (VP - renderedH) / 2 + offset.y;
+      const srcX = (-renderedLeft) / effScale;
+      const srcY = (-renderedTop) / effScale;
+
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const el = new Image();
+        el.onload = () => resolve(el);
+        el.onerror = () => reject(new Error("Could not load image"));
+        el.src = imgUrl;
+      });
+
+      const outSize = Math.round(srcSizePx);
+      const canvas = document.createElement("canvas");
+      canvas.width = outSize;
+      canvas.height = outSize;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas unavailable");
+      ctx.drawImage(img, srcX, srcY, srcSizePx, srcSizePx, 0, 0, outSize, outSize);
+      const outType = baseFile.type === "image/png" ? "image/png" : "image/jpeg";
+      const blob: Blob = await new Promise((resolve, reject) =>
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Crop failed"))), outType, 0.92)
+      );
+      const baseName = baseFile.name.replace(/\.[^.]+$/, "");
+      const ext = outType === "image/png" ? "png" : "jpg";
+      onApply(new File([blob], `${baseName}-cropped.${ext}`, { type: outType }));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not crop");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" role="dialog" aria-modal="true">
+      <div className="bento-card p-5 w-full max-w-md">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-sm flex items-center gap-2"><CropIcon className="size-4" /> Crop & zoom</h2>
+          <button onClick={onCancel} className="p-1 rounded-full hover:bg-muted text-muted-foreground">
+            <X className="size-4" />
+          </button>
+        </div>
+        <div
+          className="relative mx-auto overflow-hidden rounded-lg bg-black/40 touch-none select-none cursor-grab active:cursor-grabbing"
+          style={{ width: VP, height: VP }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+        >
+          {imgUrl && natural && (
+            <img
+              src={imgUrl}
+              alt=""
+              draggable={false}
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: "50%",
+                width: renderedW,
+                height: renderedH,
+                transform: `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px))`,
+                maxWidth: "none",
+              }}
+            />
+          )}
+          <div className="pointer-events-none absolute inset-0 ring-1 ring-white/30" />
+        </div>
+        <div className="flex items-center gap-3 mt-4">
+          <ZoomOut className="size-4 text-muted-foreground" />
+          <input
+            type="range" min={1} max={4} step={0.01} value={zoom}
+            onChange={(e) => {
+              const z = Number(e.target.value);
+              setZoom(z);
+              const newBaseScale = natural ? Math.max(VP / natural.w, VP / natural.h) : 1;
+              const newEff = newBaseScale * z;
+              const newW = natural ? natural.w * newEff : 0;
+              const newH = natural ? natural.h * newEff : 0;
+              const mx = Math.max(0, (newW - VP) / 2);
+              const my = Math.max(0, (newH - VP) / 2);
+              setOffset((o) => ({
+                x: Math.max(-mx, Math.min(mx, o.x)),
+                y: Math.max(-my, Math.min(my, o.y)),
+              }));
+            }}
+            className="flex-1 accent-primary"
+          />
+          <ZoomIn className="size-4 text-muted-foreground" />
+        </div>
+        <div className="flex justify-end gap-2 mt-4">
+          <button onClick={onCancel} className="rounded-full px-4 py-2 text-sm font-semibold bg-muted hover:bg-muted/70 transition">
+            Cancel
+          </button>
+          <button onClick={apply} disabled={saving || !baseFile} className="rounded-full px-4 py-2 text-sm font-semibold bg-gradient-to-r from-primary to-accent text-primary-foreground disabled:opacity-50 hover:opacity-90 transition">
+            {saving ? "Applying…" : "Apply crop"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
