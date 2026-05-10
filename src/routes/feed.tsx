@@ -185,8 +185,27 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
       {files.length > 0 && (
         <div className="grid grid-cols-4 gap-2 mt-3">
           {files.map((f, i) => (
-            <div key={i} className="relative aspect-square rounded-lg overflow-hidden">
-              <img src={URL.createObjectURL(f)} alt="" className="w-full h-full object-cover" />
+            <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-muted/30 group">
+              <img
+                src={URL.createObjectURL(f)}
+                alt=""
+                className="w-full h-full object-cover transition-transform duration-200"
+                style={{ transform: `rotate(${rotations[i] ?? 0}deg)` }}
+              />
+              <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 p-1.5 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition">
+                <button type="button" onClick={() => rotate(i, -1)} title="Rotate left"
+                  className="p-1 rounded-full bg-black/60 text-white hover:bg-black/80">
+                  <RotateCcw className="size-3.5" />
+                </button>
+                <button type="button" onClick={() => rotate(i, 1)} title="Rotate right"
+                  className="p-1 rounded-full bg-black/60 text-white hover:bg-black/80">
+                  <RotateCw className="size-3.5" />
+                </button>
+                <button type="button" onClick={() => removeFile(i)} title="Remove"
+                  className="p-1 rounded-full bg-black/60 text-white hover:bg-destructive">
+                  <X className="size-3.5" />
+                </button>
+              </div>
             </div>
           ))}
         </div>
