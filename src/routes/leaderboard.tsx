@@ -43,10 +43,12 @@ function LeaderboardPage() {
           <div>
             <p className="text-primary font-semibold text-sm mb-2 inline-flex items-center gap-2"><Trophy className="size-4" /> LEADERBOARD</p>
             <h1 className="text-4xl md:text-5xl font-bold mb-2">Earn points. Outpace your crew.</h1>
-            <p className="text-muted-foreground">Log every quest you finish — harder quests = more points.</p>
+            <p className="text-muted-foreground">Harder quests = more points. Keep your streak alive for a multiplier.</p>
           </div>
           <LogCompletion onLogged={() => window.dispatchEvent(new Event("completions:refresh"))} userId={user.id} />
         </div>
+
+        <StreakBanner userId={user.id} />
 
         <div className="flex gap-2 border-b border-border mb-6">
           <TabBtn active={tab === "world"} onClick={() => setTab("world")}>🌍 Worldwide</TabBtn>
