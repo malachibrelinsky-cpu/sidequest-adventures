@@ -144,6 +144,9 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
   const [isQuest, setIsQuest] = useState(false);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [points, setPoints] = useState<string>("25");
+  const [participantsNeeded, setParticipantsNeeded] = useState<string>("4");
+  const [questTime, setQuestTime] = useState<string>("");
+  const [location, setLocation] = useState<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
   const [cropIndex, setCropIndex] = useState<number | null>(null);
 
@@ -175,14 +178,19 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
 
   const submit = async () => {
     if (!user) return;
-    if (files.length === 0) { toast.error("Add at least one photo"); return; }
+    if (!isQuest && files.length === 0) { toast.error("Add at least one photo"); return; }
     const cap = captionSchema.safeParse(caption);
     if (!cap.success) { toast.error("Caption too long"); return; }
-    let questFields: { difficulty: Difficulty; points: number } | null = null;
+    let questFields: { difficulty: Difficulty; points: number; participants_needed: number; quest_time: string; location: string } | null = null;
     if (isQuest) {
       const parsed = pointsSchema.safeParse(Number(points));
       if (!parsed.success) { toast.error("Points must be a whole number from 0 to 150"); return; }
-      questFields = { difficulty, points: parsed.data };
+      const pn = Number(participantsNeeded);
+      if (!Number.isInteger(pn) || pn < 1 || pn > 50) { toast.error("Participants must be 1–50"); return; }
+      if (!questTime) { toast.error("Pick a time for the quest"); return; }
+      const loc = location.trim();
+      if (!loc) { toast.error("Add a location"); return; }
+      questFields = { difficulty, points: parsed.data, participants_needed: pn, quest_time: new Date(questTime).toISOString(), location: loc };
     }
     setUploading(true);
     try {
@@ -204,9 +212,13 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
         image_urls: urls,
         difficulty: questFields?.difficulty ?? null,
         points: questFields?.points ?? null,
+        participants_needed: questFields?.participants_needed ?? null,
+        quest_time: questFields?.quest_time ?? null,
+        location: questFields?.location ?? null,
       });
       if (error) throw error;
       setCaption(""); setFiles([]); setRotations([]); setIsQuest(false); setDifficulty("medium"); setPoints("25");
+      setParticipantsNeeded("4"); setQuestTime(""); setLocation("");
       if (fileRef.current) fileRef.current.value = "";
       toast.success("Posted!");
       onPosted();
