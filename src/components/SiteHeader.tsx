@@ -19,6 +19,7 @@ export function SiteHeader() {
           <Link to="/quests" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">Quests</Link>
           <Link to="/map" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">Map</Link>
           <Link to="/feed" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">Feed</Link>
+          {user && <Link to="/messages" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">Messages</Link>}
           <Link to="/how-it-works" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">How it works</Link>
         </nav>
         {user ? (

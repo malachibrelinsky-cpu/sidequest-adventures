@@ -1,13 +1,21 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
-import { MapPin, Navigation, Sparkles } from "lucide-react";
+import { MapPin, Navigation, Sparkles, MessageCircle } from "lucide-react";
 
 export const Route = createFileRoute("/map")({
-  head: () => ({ meta: [{ title: "Map — SideQuest" }, { name: "description", content: "Find members near you on the SideQuest live map." }] }),
+  head: () => ({
+    meta: [
+      { title: "Map — SideQuest" },
+      { name: "description", content: "Find SideQuest members near you on a live worldwide map." },
+    ],
+    links: [
+      { rel: "stylesheet", href: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" },
+    ],
+  }),
   component: MapPage,
 });
 
@@ -22,7 +30,6 @@ function MapPage() {
   const navigate = useNavigate();
   const [members, setMembers] = useState<Member[]>([]);
   const [me, setMe] = useState<Member | null>(null);
-  const [cityInput, setCityInput] = useState("");
   const [savingLoc, setSavingLoc] = useState(false);
   const [selected, setSelected] = useState<Member | null>(null);
 
@@ -42,44 +49,47 @@ function MapPage() {
     setSavingLoc(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        const { error } = await supabase.from("profiles").update({
-          latitude: pos.coords.latitude, longitude: pos.coords.longitude,
-        }).eq("id", user!.id);
+        // Reverse geocode for city name (free, no key required)
+        let cityName: string | null = null;
+        try {
+          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&zoom=10`);
+          const j = await r.json();
+          cityName = j.address?.city || j.address?.town || j.address?.village || j.address?.state || j.address?.country || null;
+        } catch {}
+        const update: { latitude: number; longitude: number; city?: string } = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        };
+        if (cityName) update.city = cityName;
+        const { error } = await supabase.from("profiles").update(update).eq("id", user!.id);
         setSavingLoc(false);
         if (error) toast.error(error.message);
-        else { toast.success("Location updated"); load(); }
+        else { toast.success(cityName ? `Located in ${cityName}` : "Location updated"); load(); }
       },
       (err) => { setSavingLoc(false); toast.error(err.message); },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 15000 }
     );
   };
 
-  const saveCity = async () => {
-    if (!cityInput.trim() || !user) return;
+  const searchCity = async (query: string) => {
+    if (!query.trim() || !user) return;
     setSavingLoc(true);
-    const baseLat = 37.7749 + (Math.random() - 0.5) * 0.02;
-    const baseLng = -122.4194 + (Math.random() - 0.5) * 0.02;
-    const { error } = await supabase.from("profiles").update({
-      city: cityInput.trim(), latitude: baseLat, longitude: baseLng,
-    }).eq("id", user.id);
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`);
+      const j = await r.json();
+      if (!j[0]) { toast.error("City not found"); setSavingLoc(false); return; }
+      const { error } = await supabase.from("profiles").update({
+        city: query.trim(),
+        latitude: parseFloat(j[0].lat),
+        longitude: parseFloat(j[0].lon),
+      }).eq("id", user.id);
+      if (error) toast.error(error.message);
+      else { toast.success(`Located in ${query}`); load(); }
+    } catch { toast.error("Geocoding failed"); }
     setSavingLoc(false);
-    if (error) toast.error(error.message);
-    else { toast.success("Area saved"); setCityInput(""); load(); }
   };
 
   if (loading || !user) return <div className="min-h-screen grid place-items-center text-muted-foreground">Loading…</div>;
-
-  const allPts = [...members, ...(me?.latitude != null ? [me] : [])];
-  const lats = allPts.map((m) => m.latitude!);
-  const lngs = allPts.map((m) => m.longitude!);
-  const minLat = Math.min(...lats, (me?.latitude ?? 37.77) - 0.03);
-  const maxLat = Math.max(...lats, (me?.latitude ?? 37.77) + 0.03);
-  const minLng = Math.min(...lngs, (me?.longitude ?? -122.42) - 0.03);
-  const maxLng = Math.max(...lngs, (me?.longitude ?? -122.42) + 0.03);
-  const project = (lat: number, lng: number) => ({
-    x: ((lng - minLng) / Math.max(maxLng - minLng, 0.0001)) * 100,
-    y: 100 - ((lat - minLat) / Math.max(maxLat - minLat, 0.0001)) * 100,
-  });
 
   return (
     <div className="min-h-screen">
@@ -88,84 +98,20 @@ function MapPage() {
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-primary font-semibold text-sm mb-2">LIVE MAP</p>
-            <h1 className="text-4xl md:text-5xl font-bold">Questers near you</h1>
-            <p className="text-muted-foreground mt-2">Tap a pin to see who they are and start a quest together.</p>
+            <h1 className="text-4xl md:text-5xl font-bold">Questers worldwide</h1>
+            <p className="text-muted-foreground mt-2">Real GPS, real cities. Tap a pin to start a chat.</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button onClick={useGPS} disabled={savingLoc}
-              className="rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-5 py-2.5 font-semibold text-sm flex items-center gap-2 disabled:opacity-50 hover:opacity-90 transition">
-              <Navigation className="size-4" /> Use my location
-            </button>
-            <div className="flex items-center gap-2 bento-card px-3 py-1">
-              <input
-                value={cityInput} onChange={(e) => setCityInput(e.target.value)} maxLength={100}
-                placeholder="or type your area…"
-                className="bg-transparent outline-none text-sm w-40 sm:w-52 py-1.5"
-              />
-              <button onClick={saveCity} disabled={savingLoc || !cityInput.trim()}
-                className="text-primary text-sm font-semibold disabled:opacity-50">Save</button>
-            </div>
-          </div>
+          <LocationControls onGPS={useGPS} onCity={searchCity} saving={savingLoc} />
         </div>
 
         <div className="grid lg:grid-cols-[1fr_320px] gap-5">
-          <div className="bento-card relative aspect-[4/3] lg:aspect-auto lg:min-h-[600px] overflow-hidden">
-            <div className="absolute inset-0 opacity-30"
-              style={{
-                backgroundImage: `linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)`,
-                backgroundSize: "40px 40px",
-              }}/>
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10" />
-
-            {allPts.length === 0 && (
-              <div className="absolute inset-0 grid place-items-center text-center px-6">
-                <div>
-                  <MapPin className="size-10 text-primary mx-auto mb-3" />
-                  <p className="font-semibold mb-1">No questers placed yet</p>
-                  <p className="text-sm text-muted-foreground">Set your location to put yourself on the map.</p>
-                </div>
-              </div>
-            )}
-
-            {me?.latitude != null && me.longitude != null && (() => {
-              const p = project(me.latitude, me.longitude);
-              return (
-                <div className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${p.x}%`, top: `${p.y}%` }}>
-                  <div className="relative">
-                    <div className="absolute inset-0 size-10 rounded-full bg-primary/40 animate-ping" />
-                    <div className="relative size-10 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground font-bold ring-4 ring-background">
-                      You
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {members.map((m) => {
-              const p = project(m.latitude!, m.longitude!);
-              return (
-                <button key={m.id}
-                  onClick={() => setSelected(m)}
-                  className="absolute -translate-x-1/2 -translate-y-1/2 group"
-                  style={{ left: `${p.x}%`, top: `${p.y}%` }}>
-                  <div className="size-9 rounded-full bg-card border-2 border-primary grid place-items-center overflow-hidden hover:scale-110 transition shadow-[0_0_20px_-4px_var(--mint)]">
-                    {m.avatar_url ? (
-                      <img src={m.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-xs font-bold">{m.display_name[0]?.toUpperCase()}</span>
-                    )}
-                  </div>
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition pointer-events-none bg-card border border-border rounded-md px-2 py-0.5 text-xs whitespace-nowrap">
-                    {m.display_name}
-                  </div>
-                </button>
-              );
-            })}
+          <div className="bento-card relative aspect-[4/3] lg:aspect-auto lg:min-h-[600px] overflow-hidden p-0">
+            <LeafletMap me={me} members={members} onSelect={setSelected} />
           </div>
 
           <aside className="bento-card p-5 space-y-4">
             <div className="flex items-center gap-2 text-sm text-primary font-semibold">
-              <Sparkles className="size-4" /> {members.length} nearby
+              <Sparkles className="size-4" /> {members.length} questers on the map
             </div>
             {selected ? (
               <div>
@@ -181,13 +127,16 @@ function MapPage() {
                   </div>
                 </div>
                 {selected.bio && <p className="text-sm text-muted-foreground mb-4">{selected.bio}</p>}
-                <button className="w-full rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground py-2.5 font-semibold text-sm hover:opacity-90 transition">
-                  Send quest invite
-                </button>
+                <Link
+                  to="/messages/$userId" params={{ userId: selected.id }}
+                  className="w-full rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground py-2.5 font-semibold text-sm hover:opacity-90 transition flex items-center justify-center gap-2"
+                >
+                  <MessageCircle className="size-4" /> Start a chat
+                </Link>
               </div>
             ) : (
               <div className="space-y-2">
-                {members.length === 0 && <p className="text-sm text-muted-foreground">No one's on the map near you yet — invite a friend.</p>}
+                {members.length === 0 && <p className="text-sm text-muted-foreground">No one's on the map yet — set your location or invite a friend.</p>}
                 {members.slice(0, 8).map((m) => (
                   <button key={m.id} onClick={() => setSelected(m)}
                     className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/40 transition text-left">
@@ -207,5 +156,98 @@ function MapPage() {
       </main>
       <SiteFooter />
     </div>
+  );
+}
+
+function LocationControls({ onGPS, onCity, saving }: { onGPS: () => void; onCity: (q: string) => void; saving: boolean }) {
+  const [city, setCity] = useState("");
+  return (
+    <div className="flex flex-wrap gap-2">
+      <button onClick={onGPS} disabled={saving}
+        className="rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-5 py-2.5 font-semibold text-sm flex items-center gap-2 disabled:opacity-50 hover:opacity-90 transition">
+        <Navigation className="size-4" /> Use my GPS
+      </button>
+      <form
+        onSubmit={(e) => { e.preventDefault(); onCity(city); setCity(""); }}
+        className="flex items-center gap-2 bento-card px-3 py-1"
+      >
+        <input
+          value={city} onChange={(e) => setCity(e.target.value)} maxLength={100}
+          placeholder="search city worldwide…"
+          className="bg-transparent outline-none text-sm w-44 sm:w-56 py-1.5"
+        />
+        <button type="submit" disabled={saving || !city.trim()}
+          className="text-primary text-sm font-semibold disabled:opacity-50">Go</button>
+      </form>
+    </div>
+  );
+}
+
+function LeafletMap({ me, members, onSelect }: { me: Member | null; members: Member[]; onSelect: (m: Member) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  const layerRef = useRef<any>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const L = (await import("leaflet")).default;
+      if (cancelled || !ref.current) return;
+      if (!mapRef.current) {
+        const center: [number, number] = me?.latitude != null && me.longitude != null
+          ? [me.latitude, me.longitude]
+          : [20, 0];
+        const zoom = me?.latitude != null ? 11 : 2;
+        mapRef.current = L.map(ref.current, { zoomControl: true, attributionControl: false }).setView(center, zoom);
+        L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+          maxZoom: 19,
+        }).addTo(mapRef.current);
+        layerRef.current = L.layerGroup().addTo(mapRef.current);
+      }
+      setReady(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    (async () => {
+      const L = (await import("leaflet")).default;
+      if (!layerRef.current) return;
+      layerRef.current.clearLayers();
+
+      const mintMarker = (label: string, isMe: boolean, avatar: string | null) => {
+        const initial = label[0]?.toUpperCase() ?? "?";
+        const html = isMe
+          ? `<div style="position:relative;width:42px;height:42px"><div style="position:absolute;inset:0;border-radius:9999px;background:rgba(115,255,184,.4);animation:ping 1.5s cubic-bezier(0,0,.2,1) infinite"></div><div style="position:relative;width:42px;height:42px;border-radius:9999px;background:linear-gradient(135deg,#2dd4a8,#73ffb8);display:grid;place-items:center;color:#0d1b2a;font-weight:800;font-size:11px;border:3px solid #0d1b2a;box-shadow:0 0 20px #2dd4a8">You</div></div>`
+          : `<div style="width:38px;height:38px;border-radius:9999px;background:#0d1b2a;border:2px solid #2dd4a8;display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px;overflow:hidden;box-shadow:0 0 18px -4px #2dd4a8">${avatar ? `<img src="${avatar}" style="width:100%;height:100%;object-fit:cover"/>` : initial}</div>`;
+        return L.divIcon({ html, className: "", iconSize: [42, 42], iconAnchor: [21, 21] });
+      };
+
+      if (me?.latitude != null && me.longitude != null) {
+        L.marker([me.latitude, me.longitude], { icon: mintMarker("You", true, null) })
+          .bindTooltip("You", { direction: "top" })
+          .addTo(layerRef.current);
+      }
+      members.forEach((m) => {
+        const marker = L.marker([m.latitude!, m.longitude!], { icon: mintMarker(m.display_name, false, m.avatar_url) })
+          .bindTooltip(m.display_name, { direction: "top" })
+          .on("click", () => onSelect(m));
+        marker.addTo(layerRef.current);
+      });
+
+      // Recenter if we just got a location
+      if (me?.latitude != null && me.longitude != null && mapRef.current.getZoom() < 5) {
+        mapRef.current.setView([me.latitude, me.longitude], 11);
+      }
+    })();
+  }, [ready, me, members, onSelect]);
+
+  return (
+    <>
+      <style>{`@keyframes ping { 75%,100% { transform: scale(2); opacity: 0; } }`}</style>
+      <div ref={ref} className="absolute inset-0 z-0" />
+    </>
   );
 }
