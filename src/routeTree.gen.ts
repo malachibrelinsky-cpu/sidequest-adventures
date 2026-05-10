@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as QuestsRouteImport } from './routes/quests'
+import { Route as QuanRouteImport } from './routes/quan'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
@@ -23,6 +24,11 @@ import { Route as MessagesUserIdRouteImport } from './routes/messages.$userId'
 const QuestsRoute = QuestsRouteImport.update({
   id: '/quests',
   path: '/quests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QuanRoute = QuanRouteImport.update({
+  id: '/quan',
+  path: '/quan',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/how-it-works': typeof HowItWorksRoute
   '/map': typeof MapRoute
   '/profile': typeof ProfileRoute
+  '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
   '/messages/$userId': typeof MessagesUserIdRoute
   '/messages/': typeof MessagesIndexRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/how-it-works': typeof HowItWorksRoute
   '/map': typeof MapRoute
   '/profile': typeof ProfileRoute
+  '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
   '/messages/$userId': typeof MessagesUserIdRoute
   '/messages': typeof MessagesIndexRoute
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/how-it-works': typeof HowItWorksRoute
   '/map': typeof MapRoute
   '/profile': typeof ProfileRoute
+  '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
   '/messages/$userId': typeof MessagesUserIdRoute
   '/messages/': typeof MessagesIndexRoute
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/map'
     | '/profile'
+    | '/quan'
     | '/quests'
     | '/messages/$userId'
     | '/messages/'
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/map'
     | '/profile'
+    | '/quan'
     | '/quests'
     | '/messages/$userId'
     | '/messages'
@@ -142,6 +153,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/map'
     | '/profile'
+    | '/quan'
     | '/quests'
     | '/messages/$userId'
     | '/messages/'
@@ -155,6 +167,7 @@ export interface RootRouteChildren {
   HowItWorksRoute: typeof HowItWorksRoute
   MapRoute: typeof MapRoute
   ProfileRoute: typeof ProfileRoute
+  QuanRoute: typeof QuanRoute
   QuestsRoute: typeof QuestsRoute
   MessagesUserIdRoute: typeof MessagesUserIdRoute
   MessagesIndexRoute: typeof MessagesIndexRoute
@@ -167,6 +180,13 @@ declare module '@tanstack/react-router' {
       path: '/quests'
       fullPath: '/quests'
       preLoaderRoute: typeof QuestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/quan': {
+      id: '/quan'
+      path: '/quan'
+      fullPath: '/quan'
+      preLoaderRoute: typeof QuanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -243,6 +263,7 @@ const rootRouteChildren: RootRouteChildren = {
   HowItWorksRoute: HowItWorksRoute,
   MapRoute: MapRoute,
   ProfileRoute: ProfileRoute,
+  QuanRoute: QuanRoute,
   QuestsRoute: QuestsRoute,
   MessagesUserIdRoute: MessagesUserIdRoute,
   MessagesIndexRoute: MessagesIndexRoute,
@@ -250,3 +271,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
