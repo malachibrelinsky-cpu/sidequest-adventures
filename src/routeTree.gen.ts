@@ -10,7 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as QuestsRouteImport } from './routes/quests'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as MapRouteImport } from './routes/map'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
+import { Route as FeedRouteImport } from './routes/feed'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -19,9 +23,29 @@ const QuestsRoute = QuestsRouteImport.update({
   path: '/quests',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapRoute = MapRouteImport.update({
+  id: '/map',
+  path: '/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HowItWorksRoute = HowItWorksRouteImport.update({
   id: '/how-it-works',
   path: '/how-it-works',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedRoute = FeedRouteImport.update({
+  id: '/feed',
+  path: '/feed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -38,34 +62,75 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/auth': typeof AuthRoute
+  '/feed': typeof FeedRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/map': typeof MapRoute
+  '/profile': typeof ProfileRoute
   '/quests': typeof QuestsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/auth': typeof AuthRoute
+  '/feed': typeof FeedRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/map': typeof MapRoute
+  '/profile': typeof ProfileRoute
   '/quests': typeof QuestsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/auth': typeof AuthRoute
+  '/feed': typeof FeedRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/map': typeof MapRoute
+  '/profile': typeof ProfileRoute
   '/quests': typeof QuestsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/how-it-works' | '/quests'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/auth'
+    | '/feed'
+    | '/how-it-works'
+    | '/map'
+    | '/profile'
+    | '/quests'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/how-it-works' | '/quests'
-  id: '__root__' | '/' | '/about' | '/how-it-works' | '/quests'
+  to:
+    | '/'
+    | '/about'
+    | '/auth'
+    | '/feed'
+    | '/how-it-works'
+    | '/map'
+    | '/profile'
+    | '/quests'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/auth'
+    | '/feed'
+    | '/how-it-works'
+    | '/map'
+    | '/profile'
+    | '/quests'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AuthRoute: typeof AuthRoute
+  FeedRoute: typeof FeedRoute
   HowItWorksRoute: typeof HowItWorksRoute
+  MapRoute: typeof MapRoute
+  ProfileRoute: typeof ProfileRoute
   QuestsRoute: typeof QuestsRoute
 }
 
@@ -78,11 +143,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof QuestsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/map': {
+      id: '/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof MapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/how-it-works': {
       id: '/how-it-works'
       path: '/how-it-works'
       fullPath: '/how-it-works'
       preLoaderRoute: typeof HowItWorksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed': {
+      id: '/feed'
+      path: '/feed'
+      fullPath: '/feed'
+      preLoaderRoute: typeof FeedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -105,7 +198,11 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AuthRoute: AuthRoute,
+  FeedRoute: FeedRoute,
   HowItWorksRoute: HowItWorksRoute,
+  MapRoute: MapRoute,
+  ProfileRoute: ProfileRoute,
   QuestsRoute: QuestsRoute,
 }
 export const routeTree = rootRouteImport
