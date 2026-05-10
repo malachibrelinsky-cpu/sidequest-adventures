@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
-import { Heart, MessageCircle, Image as ImageIcon, Send } from "lucide-react";
+import { Heart, MessageCircle, Image as ImageIcon, Send, Trophy } from "lucide-react";
 import { z } from "zod";
 
 export const Route = createFileRoute("/feed")({
@@ -12,12 +12,23 @@ export const Route = createFileRoute("/feed")({
   component: FeedPage,
 });
 
+const DIFFICULTIES = ["easy", "medium", "hard", "epic"] as const;
+type Difficulty = typeof DIFFICULTIES[number];
+const DIFFICULTY_DEFAULTS: Record<Difficulty, number> = { easy: 10, medium: 25, hard: 60, epic: 150 };
+const DIFFICULTY_STYLE: Record<Difficulty, string> = {
+  easy: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  medium: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+  hard: "bg-orange-500/15 text-orange-400 border-orange-500/30",
+  epic: "bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30",
+};
+
 type Profile = { id: string; display_name: string; avatar_url: string | null };
 type Comment = { id: string; body: string; created_at: string; user_id: string; profiles: Profile | null };
-type Post = { id: string; caption: string | null; image_urls: string[]; created_at: string; user_id: string; profiles: Profile | null; comments: Comment[] };
+type Post = { id: string; caption: string | null; image_urls: string[]; created_at: string; user_id: string; difficulty: Difficulty | null; points: number | null; profiles: Profile | null; comments: Comment[] };
 
 const captionSchema = z.string().trim().max(500);
 const commentSchema = z.string().trim().min(1).max(1000);
+const pointsSchema = z.number().int().min(0).max(500);
 
 function FeedPage() {
   const { user, loading } = useAuth();
