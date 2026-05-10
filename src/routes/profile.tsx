@@ -5,6 +5,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
 import { z } from "zod";
+import { computeBadges, computeStreak, bestEverStreak, flatBadges, formatCountdown, type CompletionRow, type Badge } from "@/lib/streaks";
+import { Flame } from "lucide-react";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "My profile — SideQuest" }] }),
