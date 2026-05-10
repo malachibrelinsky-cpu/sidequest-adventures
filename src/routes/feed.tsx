@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
-import { Heart, MessageCircle, Image as ImageIcon, Send, Trophy, Pencil, Trash2, Check, X, RotateCw, RotateCcw, Crop as CropIcon, ZoomIn, ZoomOut, Users, MapPin, Clock } from "lucide-react";
+import { Heart, MessageCircle, Image as ImageIcon, Send, Trophy, Pencil, Trash2, Check, X, RotateCw, RotateCcw, Crop as CropIcon, ZoomIn, ZoomOut, Users, MapPin, Clock, Sparkles, CheckCircle2, Upload } from "lucide-react";
 import { z } from "zod";
 
 export const Route = createFileRoute("/feed")({
@@ -24,7 +24,7 @@ const DIFFICULTY_STYLE: Record<Difficulty, string> = {
 
 type Profile = { id: string; display_name: string; avatar_url: string | null };
 type Comment = { id: string; body: string; created_at: string; user_id: string; profiles: Profile | null };
-type Post = { id: string; caption: string | null; image_urls: string[]; created_at: string; user_id: string; difficulty: Difficulty | null; points: number | null; participants_needed: number | null; quest_time: string | null; location: string | null; profiles: Profile | null; comments: Comment[]; quest_participants: { user_id: string }[] };
+type Post = { id: string; caption: string | null; image_urls: string[]; created_at: string; user_id: string; difficulty: Difficulty | null; points: number | null; participants_needed: number | null; quest_time: string | null; location: string | null; completed_at: string | null; evidence_urls: string[]; profiles: Profile | null; comments: Comment[]; quest_participants: { user_id: string }[] };
 
 const captionSchema = z.string().trim().max(150);
 const commentSchema = z.string().trim().min(1).max(1000);
@@ -78,7 +78,7 @@ function FeedPage() {
   const load = async () => {
     const { data, error } = await supabase
       .from("posts")
-      .select("id, caption, image_urls, created_at, user_id, difficulty, points, participants_needed, quest_time, location, profiles!posts_user_id_fkey(id, display_name, avatar_url), comments(id, body, created_at, user_id, profiles!comments_user_id_fkey(id, display_name, avatar_url)), quest_participants(user_id)")
+      .select("id, caption, image_urls, created_at, user_id, difficulty, points, participants_needed, quest_time, location, completed_at, evidence_urls, profiles!posts_user_id_fkey(id, display_name, avatar_url), comments(id, body, created_at, user_id, profiles!comments_user_id_fkey(id, display_name, avatar_url)), quest_participants(user_id)")
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) { toast.error(error.message); return; }
@@ -355,9 +355,11 @@ function PostCard({ post, onChange, currentUserId }: { post: Post; onChange: () 
   const [editCaption, setEditCaption] = useState(post.caption ?? "");
   const [saving, setSaving] = useState(false);
   const [accepting, setAccepting] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
   const profile = post.profiles;
   const isOwner = post.user_id === currentUserId;
   const isQuest = !!post.difficulty;
+  const isCompleted = !!post.completed_at;
   const participants = post.quest_participants ?? [];
   const joined = participants.some((p) => p.user_id === currentUserId);
   const full = post.participants_needed != null && participants.length >= post.participants_needed;
@@ -465,14 +467,39 @@ function PostCard({ post, onChange, currentUserId }: { post: Post; onChange: () 
               </div>
             )}
           </div>
-          <button
-            onClick={acceptQuest}
-            disabled={accepting || (full && !joined)}
-            className="w-full rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground py-2.5 font-semibold text-sm disabled:opacity-50 hover:opacity-90 transition inline-flex items-center justify-center gap-2"
-          >
-            <Trophy className="size-4" />
-            {joined ? "Open group chat" : full ? "Quest full" : accepting ? "Accepting…" : "Accept Quest"}
-          </button>
+          {isCompleted ? (
+            <div className="w-full rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 py-2.5 font-semibold text-sm inline-flex items-center justify-center gap-2">
+              <CheckCircle2 className="size-4" />
+              Completed · {post.points ?? 0} pts awarded to crew
+            </div>
+          ) : isOwner ? (
+            <button
+              onClick={() => setShowCompleteModal(true)}
+              className="w-full rounded-full bg-gradient-to-r from-emerald-500 to-primary text-primary-foreground py-2.5 font-semibold text-sm hover:opacity-90 transition inline-flex items-center justify-center gap-2"
+            >
+              <CheckCircle2 className="size-4" />
+              Quest is Completed
+            </button>
+          ) : (
+            <button
+              onClick={acceptQuest}
+              disabled={accepting || (full && !joined)}
+              className="w-full rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground py-2.5 font-semibold text-sm disabled:opacity-50 hover:opacity-90 transition inline-flex items-center justify-center gap-2"
+            >
+              <Trophy className="size-4" />
+              {joined ? "Open group chat" : full ? "Quest full" : accepting ? "Accepting…" : "Accept Quest"}
+            </button>
+          )}
+          {isCompleted && post.evidence_urls.length > 0 && (
+            <div className="grid grid-cols-3 gap-1 mt-2">
+              {post.evidence_urls.slice(0, 6).map((url, i) => {
+                const isVideo = /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url);
+                return isVideo
+                  ? <video key={i} src={url} controls className="w-full aspect-square object-cover rounded" />
+                  : <img key={i} src={url} alt="" loading="lazy" className="w-full aspect-square object-cover rounded" />;
+              })}
+            </div>
+          )}
         </div>
       )}
       {post.image_urls.length > 0 && (
@@ -534,7 +561,107 @@ function PostCard({ post, onChange, currentUserId }: { post: Post; onChange: () 
           </div>
         </div>
       )}
+      {showCompleteModal && (
+        <CompleteQuestModal
+          post={post}
+          onClose={() => setShowCompleteModal(false)}
+          onCompleted={() => { setShowCompleteModal(false); onChange(); }}
+        />
+      )}
     </article>
+  );
+}
+
+function CompleteQuestModal({ post, onClose, onCompleted }: { post: Post; onClose: () => void; onCompleted: () => void }) {
+  const { user } = useAuth();
+  const [files, setFiles] = useState<File[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [verdict, setVerdict] = useState<{ approved: boolean; reason: string } | null>(null);
+
+  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFiles(Array.from(e.target.files ?? []).slice(0, 6));
+  };
+
+  const submit = async () => {
+    if (!user) return;
+    if (files.length === 0) { toast.error("Add photo or video evidence"); return; }
+    setSubmitting(true);
+    setVerdict(null);
+    try {
+      const urls: string[] = [];
+      for (const f of files) {
+        const ext = (f.name.split(".").pop() ?? "jpg").toLowerCase();
+        const path = `${user.id}/evidence/${post.id}-${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("post-images").upload(path, f, { contentType: f.type });
+        if (upErr) throw upErr;
+        const { data } = supabase.storage.from("post-images").getPublicUrl(path);
+        urls.push(data.publicUrl);
+      }
+      const { data, error } = await supabase.functions.invoke("screen-quest-completion", {
+        body: { post_id: post.id, evidence_urls: urls },
+      });
+      if (error) throw error;
+      const result = data as { approved: boolean; reason: string; awarded?: number; points?: number; error?: string };
+      if (result?.error) throw new Error(result.error);
+      setVerdict({ approved: !!result.approved, reason: result.reason ?? "" });
+      if (result.approved) {
+        toast.success(`Quan approved! ${result.points ?? 0} pts awarded to ${result.awarded ?? 0} crew members.`);
+        setTimeout(onCompleted, 1500);
+      } else {
+        toast.error("Quan rejected the evidence");
+      }
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Could not submit evidence");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" role="dialog" aria-modal="true">
+      <div className="bento-card p-5 w-full max-w-md">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold flex items-center gap-2"><Sparkles className="size-4 text-primary" /> Submit quest evidence</h2>
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-muted text-muted-foreground"><X className="size-4" /></button>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Upload photos or a short video showing all participants finishing the quest.
+          Quan will screen the evidence and award <span className="font-semibold text-foreground">{post.points ?? 0} pts</span> to each crew member if approved.
+        </p>
+        <label className="block rounded-xl border-2 border-dashed border-border hover:border-primary/50 p-6 text-center cursor-pointer transition">
+          <Upload className="size-6 mx-auto text-muted-foreground mb-2" />
+          <p className="text-sm font-semibold">Tap to add photos or video</p>
+          <p className="text-xs text-muted-foreground mt-1">Up to 6 files</p>
+          <input type="file" multiple accept="image/*,video/*" className="hidden" onChange={onPick} />
+        </label>
+        {files.length > 0 && (
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            {files.map((f, i) => {
+              const url = URL.createObjectURL(f);
+              return f.type.startsWith("video/")
+                ? <video key={i} src={url} className="w-full aspect-square object-cover rounded-lg bg-muted/30" />
+                : <img key={i} src={url} alt="" className="w-full aspect-square object-cover rounded-lg bg-muted/30" />;
+            })}
+          </div>
+        )}
+        {verdict && (
+          <div className={`mt-4 rounded-xl border p-3 text-sm ${verdict.approved ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
+            <p className="font-semibold mb-1 flex items-center gap-1.5">
+              {verdict.approved ? <><CheckCircle2 className="size-4" /> Quan approved</> : <><X className="size-4" /> Quan rejected</>}
+            </p>
+            <p className="opacity-90">{verdict.reason}</p>
+          </div>
+        )}
+        <div className="flex justify-end gap-2 mt-4">
+          <button onClick={onClose} className="rounded-full px-4 py-2 text-sm font-semibold bg-muted hover:bg-muted/70 transition">Cancel</button>
+          <button onClick={submit} disabled={submitting || files.length === 0}
+            className="rounded-full px-4 py-2 text-sm font-semibold bg-gradient-to-r from-emerald-500 to-primary text-primary-foreground disabled:opacity-50 hover:opacity-90 transition inline-flex items-center gap-2">
+            <Sparkles className="size-4" />
+            {submitting ? "Quan is reviewing…" : "Submit to Quan"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

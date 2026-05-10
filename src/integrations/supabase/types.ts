@@ -130,8 +130,10 @@ export type Database = {
       posts: {
         Row: {
           caption: string | null
+          completed_at: string | null
           created_at: string
           difficulty: string | null
+          evidence_urls: string[]
           id: string
           image_urls: string[]
           location: string | null
@@ -142,8 +144,10 @@ export type Database = {
         }
         Insert: {
           caption?: string | null
+          completed_at?: string | null
           created_at?: string
           difficulty?: string | null
+          evidence_urls?: string[]
           id?: string
           image_urls?: string[]
           location?: string | null
@@ -154,8 +158,10 @@ export type Database = {
         }
         Update: {
           caption?: string | null
+          completed_at?: string | null
           created_at?: string
           difficulty?: string | null
+          evidence_urls?: string[]
           id?: string
           image_urls?: string[]
           location?: string | null
@@ -220,6 +226,7 @@ export type Database = {
           id: string
           notes: string | null
           points: number
+          post_id: string | null
           title: string
           user_id: string
         }
@@ -229,6 +236,7 @@ export type Database = {
           id?: string
           notes?: string | null
           points: number
+          post_id?: string | null
           title: string
           user_id: string
         }
@@ -238,6 +246,7 @@ export type Database = {
           id?: string
           notes?: string | null
           points?: number
+          post_id?: string | null
           title?: string
           user_id?: string
         }
