@@ -1,9 +1,11 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Compass, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { usePremium } from "@/hooks/use-premium";
 
 export function SiteHeader() {
   const { user, signOut } = useAuth();
+  const { isPremium } = usePremium();
   const navigate = useNavigate();
 
   return (
@@ -21,7 +23,7 @@ export function SiteHeader() {
           <Link to="/feed" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">Feed</Link>
           {user && <Link to="/messages" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">Messages</Link>}
           {user && <Link to="/quan" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition inline-flex items-center gap-1">Quan <span className="text-[10px] uppercase tracking-wider rounded bg-primary/20 text-primary px-1.5 py-0.5 font-bold">AI</span></Link>}
-          <Link to="/pricing" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">Pricing</Link>
+          {!isPremium && <Link to="/pricing" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">Pricing</Link>}
           <Link to="/how-it-works" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">How it works</Link>
         </nav>
         {user ? (
