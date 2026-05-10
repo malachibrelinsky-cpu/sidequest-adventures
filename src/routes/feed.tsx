@@ -228,10 +228,17 @@ function PostCard({ post, onChange, currentUserId }: { post: Post; onChange: () 
     <article className="bento-card overflow-hidden">
       <div className="p-4 flex items-center gap-3">
         <Avatar profile={profile} />
-        <div>
+        <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm">{profile?.display_name ?? "Quester"}</p>
           <p className="text-xs text-muted-foreground">{new Date(post.created_at).toLocaleString()}</p>
         </div>
+        {post.difficulty && (
+          <div className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold capitalize ${DIFFICULTY_STYLE[post.difficulty]}`}>
+            <Trophy className="size-3.5" />
+            {post.difficulty}
+            {post.points != null && <span className="opacity-80">· {post.points} pts</span>}
+          </div>
+        )}
       </div>
       {post.image_urls.length > 0 && (
         <div className={`grid gap-1 ${post.image_urls.length === 1 ? "" : post.image_urls.length === 2 ? "grid-cols-2" : "grid-cols-2"}`}>
