@@ -306,20 +306,40 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
                 onChange={(e) => setPoints(e.target.value)}
                 className="w-32 rounded-lg bg-input/40 border border-border px-3 py-2 text-sm outline-none focus:border-primary" />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1"><Users className="size-3" /> Participants needed</p>
+                <input type="number" min={1} max={50} value={participantsNeeded}
+                  onChange={(e) => setParticipantsNeeded(e.target.value)}
+                  className="w-full rounded-lg bg-input/40 border border-border px-3 py-2 text-sm outline-none focus:border-primary" />
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1"><Clock className="size-3" /> When</p>
+                <input type="datetime-local" value={questTime}
+                  onChange={(e) => setQuestTime(e.target.value)}
+                  className="w-full rounded-lg bg-input/40 border border-border px-3 py-2 text-sm outline-none focus:border-primary" />
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1"><MapPin className="size-3" /> Location</p>
+              <input type="text" maxLength={200} value={location}
+                onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Dolores Park, SF"
+                className="w-full rounded-lg bg-input/40 border border-border px-3 py-2 text-sm outline-none focus:border-primary" />
+            </div>
           </div>
         )}
       </div>
 
       <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
         <label className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary cursor-pointer transition">
-          <ImageIcon className="size-5" /> Add photos (up to 4)
+          <ImageIcon className="size-5" /> {isQuest ? "Add photos (optional)" : "Add photos (up to 4)"}
           <input ref={fileRef} type="file" accept="image/*,.heic,.heif,.avif,.bmp,.tiff,.svg" multiple className="hidden" onChange={onPick} />
         </label>
         <button
-          onClick={submit} disabled={uploading || files.length === 0}
+          onClick={submit} disabled={uploading || (!isQuest && files.length === 0)}
           className="rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-5 py-2 font-semibold text-sm disabled:opacity-50 hover:opacity-90 transition"
         >
-          {uploading ? "Posting…" : "Share"}
+          {uploading ? "Posting…" : isQuest ? "Post quest" : "Share"}
         </button>
       </div>
     </div>
