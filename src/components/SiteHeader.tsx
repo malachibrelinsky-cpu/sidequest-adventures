@@ -1,7 +1,11 @@
-import { Link } from "@tanstack/react-router";
-import { Compass } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { Compass, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 export function SiteHeader() {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/60 border-b border-border">
       <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
@@ -13,15 +17,29 @@ export function SiteHeader() {
         </Link>
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
           <Link to="/quests" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">Quests</Link>
+          <Link to="/map" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">Map</Link>
+          <Link to="/feed" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">Feed</Link>
           <Link to="/how-it-works" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">How it works</Link>
-          <Link to="/about" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">About</Link>
         </nav>
-        <Link
-          to="/quests"
-          className="rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-5 py-2 text-sm font-semibold hover:opacity-90 transition shadow-[0_0_30px_-5px_var(--mint)]"
-        >
-          Start questing
-        </Link>
+        {user ? (
+          <div className="flex items-center gap-3">
+            <Link to="/profile" className="hidden sm:block text-sm text-muted-foreground hover:text-foreground">My profile</Link>
+            <button
+              onClick={async () => { await signOut(); navigate({ to: "/" }); }}
+              className="rounded-full border border-border bg-card/60 p-2 hover:border-primary transition"
+              aria-label="Sign out"
+            >
+              <LogOut className="size-4" />
+            </button>
+          </div>
+        ) : (
+          <Link
+            to="/auth"
+            className="rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-5 py-2 text-sm font-semibold hover:opacity-90 transition shadow-[0_0_30px_-5px_var(--mint)]"
+          >
+            Join SideQuest
+          </Link>
+        )}
       </div>
     </header>
   );
