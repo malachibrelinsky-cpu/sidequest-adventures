@@ -58,7 +58,7 @@ export function SiteFooter() {
         <div className="flex gap-6">
           <Link to="/about" className="hover:text-foreground">About</Link>
           <Link to="/how-it-works" className="hover:text-foreground">How it works</Link>
-          <Link to="/quests" className="hover:text-foreground">Quests</Link>
+          <Link to="/feed" className="hover:text-foreground">Quests & Feed</Link>
         </div>
       </div>
     </footer>
