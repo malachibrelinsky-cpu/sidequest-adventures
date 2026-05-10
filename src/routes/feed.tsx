@@ -28,6 +28,40 @@ type Post = { id: string; caption: string | null; image_urls: string[]; created_
 
 const captionSchema = z.string().trim().max(150);
 const commentSchema = z.string().trim().min(1).max(1000);
+
+async function rotateImageFile(file: File, degrees: number): Promise<File> {
+  const deg = ((degrees % 360) + 360) % 360;
+  if (deg === 0) return file;
+  // Skip rasterization for SVG — keep original
+  if (file.type === "image/svg+xml") return file;
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("Could not load image for rotation"));
+      el.src = url;
+    });
+    const swap = deg === 90 || deg === 270;
+    const canvas = document.createElement("canvas");
+    canvas.width = swap ? img.naturalHeight : img.naturalWidth;
+    canvas.height = swap ? img.naturalWidth : img.naturalHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((deg * Math.PI) / 180);
+    ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+    const outType = file.type === "image/png" ? "image/png" : "image/jpeg";
+    const blob: Blob = await new Promise((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Rotation failed"))), outType, 0.92)
+    );
+    const baseName = file.name.replace(/\.[^.]+$/, "");
+    const ext = outType === "image/png" ? "png" : "jpg";
+    return new File([blob], `${baseName}.${ext}`, { type: outType });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
 const pointsSchema = z.number().int().min(0).max(150);
 
 type Tab = "all" | "quests" | "updates";
