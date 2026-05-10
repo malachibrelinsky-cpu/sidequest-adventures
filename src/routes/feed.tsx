@@ -30,11 +30,14 @@ const captionSchema = z.string().trim().max(500);
 const commentSchema = z.string().trim().min(1).max(1000);
 const pointsSchema = z.number().int().min(0).max(500);
 
+type Tab = "all" | "quests" | "updates";
+
 function FeedPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
   const [fetching, setFetching] = useState(true);
+  const [tab, setTab] = useState<Tab>("all");
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
 
@@ -53,26 +56,43 @@ function FeedPage() {
 
   if (loading || !user) return <div className="min-h-screen grid place-items-center text-muted-foreground">Loading…</div>;
 
+  const filtered = tab === "all" ? posts : tab === "quests" ? posts.filter((p) => p.difficulty) : posts.filter((p) => !p.difficulty);
+  const counts = { all: posts.length, quests: posts.filter((p) => p.difficulty).length, updates: posts.filter((p) => !p.difficulty).length };
+
   return (
     <div className="min-h-screen">
       <SiteHeader />
       <main className="mx-auto max-w-2xl px-4 py-10">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">The Feed</h1>
-          <p className="text-muted-foreground">Photos and stories from quests around you.</p>
+        <div className="mb-6">
+          <h1 className="text-4xl font-bold mb-2">Quests & Feed</h1>
+          <p className="text-muted-foreground">Joinable sidequests and photos from adventures around you.</p>
         </div>
 
         <ComposePost onPosted={load} />
 
+        <div className="flex gap-1 border-b border-border mt-8 mb-4">
+          {(["all", "quests", "updates"] as const).map((t) => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`px-4 py-2.5 text-sm font-semibold capitalize border-b-2 -mb-px transition ${tab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              {t === "quests" ? "🎯 Sidequests" : t === "updates" ? "📸 Updates" : "All"}
+              <span className="ml-1.5 text-[10px] opacity-70">{counts[t]}</span>
+            </button>
+          ))}
+        </div>
+
         {fetching ? (
           <p className="text-muted-foreground text-center py-12">Loading posts…</p>
-        ) : posts.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="bento-card p-10 text-center mt-6">
-            <p className="text-muted-foreground">No posts yet. Be the first to share a side quest.</p>
+            <p className="text-muted-foreground">
+              {tab === "quests" ? "No joinable sidequests yet — post one with the trophy toggle above." :
+               tab === "updates" ? "No photo updates yet." :
+               "No posts yet. Be the first to share a side quest."}
+            </p>
           </div>
         ) : (
-          <div className="space-y-6 mt-6">
-            {posts.map((p) => <PostCard key={p.id} post={p} onChange={load} currentUserId={user.id} />)}
+          <div className="space-y-6">
+            {filtered.map((p) => <PostCard key={p.id} post={p} onChange={load} currentUserId={user.id} />)}
           </div>
         )}
       </main>
