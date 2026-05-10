@@ -56,7 +56,7 @@ function MapPage() {
           const j = await r.json();
           cityName = j.address?.city || j.address?.town || j.address?.village || j.address?.state || j.address?.country || null;
         } catch {}
-        const update: Record<string, unknown> = {
+        const update: { latitude: number; longitude: number; city?: string } = {
           latitude: pos.coords.latitude,
           longitude: pos.coords.longitude,
         };
