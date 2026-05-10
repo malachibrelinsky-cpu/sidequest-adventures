@@ -105,6 +105,7 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
   const { user } = useAuth();
   const [caption, setCaption] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const [rotations, setRotations] = useState<number[]>([]);
   const [uploading, setUploading] = useState(false);
   const [isQuest, setIsQuest] = useState(false);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
@@ -114,6 +115,16 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.target.files ?? []).slice(0, 4);
     setFiles(picked);
+    setRotations(picked.map(() => 0));
+  };
+
+  const rotate = (i: number, dir: 1 | -1) => {
+    setRotations((rs) => rs.map((r, idx) => (idx === i ? (((r + dir * 90) % 360) + 360) % 360 : r)));
+  };
+
+  const removeFile = (i: number) => {
+    setFiles((fs) => fs.filter((_, idx) => idx !== i));
+    setRotations((rs) => rs.filter((_, idx) => idx !== i));
   };
 
   const pickDifficulty = (d: Difficulty) => {
