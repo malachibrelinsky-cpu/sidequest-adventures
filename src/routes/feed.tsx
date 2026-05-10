@@ -561,7 +561,107 @@ function PostCard({ post, onChange, currentUserId }: { post: Post; onChange: () 
           </div>
         </div>
       )}
+      {showCompleteModal && (
+        <CompleteQuestModal
+          post={post}
+          onClose={() => setShowCompleteModal(false)}
+          onCompleted={() => { setShowCompleteModal(false); onChange(); }}
+        />
+      )}
     </article>
+  );
+}
+
+function CompleteQuestModal({ post, onClose, onCompleted }: { post: Post; onClose: () => void; onCompleted: () => void }) {
+  const { user } = useAuth();
+  const [files, setFiles] = useState<File[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [verdict, setVerdict] = useState<{ approved: boolean; reason: string } | null>(null);
+
+  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFiles(Array.from(e.target.files ?? []).slice(0, 6));
+  };
+
+  const submit = async () => {
+    if (!user) return;
+    if (files.length === 0) { toast.error("Add photo or video evidence"); return; }
+    setSubmitting(true);
+    setVerdict(null);
+    try {
+      const urls: string[] = [];
+      for (const f of files) {
+        const ext = (f.name.split(".").pop() ?? "jpg").toLowerCase();
+        const path = `${user.id}/evidence/${post.id}-${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("post-images").upload(path, f, { contentType: f.type });
+        if (upErr) throw upErr;
+        const { data } = supabase.storage.from("post-images").getPublicUrl(path);
+        urls.push(data.publicUrl);
+      }
+      const { data, error } = await supabase.functions.invoke("screen-quest-completion", {
+        body: { post_id: post.id, evidence_urls: urls },
+      });
+      if (error) throw error;
+      const result = data as { approved: boolean; reason: string; awarded?: number; points?: number; error?: string };
+      if (result?.error) throw new Error(result.error);
+      setVerdict({ approved: !!result.approved, reason: result.reason ?? "" });
+      if (result.approved) {
+        toast.success(`Quan approved! ${result.points ?? 0} pts awarded to ${result.awarded ?? 0} crew members.`);
+        setTimeout(onCompleted, 1500);
+      } else {
+        toast.error("Quan rejected the evidence");
+      }
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Could not submit evidence");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" role="dialog" aria-modal="true">
+      <div className="bento-card p-5 w-full max-w-md">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold flex items-center gap-2"><Sparkles className="size-4 text-primary" /> Submit quest evidence</h2>
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-muted text-muted-foreground"><X className="size-4" /></button>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Upload photos or a short video showing all participants finishing the quest.
+          Quan will screen the evidence and award <span className="font-semibold text-foreground">{post.points ?? 0} pts</span> to each crew member if approved.
+        </p>
+        <label className="block rounded-xl border-2 border-dashed border-border hover:border-primary/50 p-6 text-center cursor-pointer transition">
+          <Upload className="size-6 mx-auto text-muted-foreground mb-2" />
+          <p className="text-sm font-semibold">Tap to add photos or video</p>
+          <p className="text-xs text-muted-foreground mt-1">Up to 6 files</p>
+          <input type="file" multiple accept="image/*,video/*" className="hidden" onChange={onPick} />
+        </label>
+        {files.length > 0 && (
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            {files.map((f, i) => {
+              const url = URL.createObjectURL(f);
+              return f.type.startsWith("video/")
+                ? <video key={i} src={url} className="w-full aspect-square object-cover rounded-lg bg-muted/30" />
+                : <img key={i} src={url} alt="" className="w-full aspect-square object-cover rounded-lg bg-muted/30" />;
+            })}
+          </div>
+        )}
+        {verdict && (
+          <div className={`mt-4 rounded-xl border p-3 text-sm ${verdict.approved ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
+            <p className="font-semibold mb-1 flex items-center gap-1.5">
+              {verdict.approved ? <><CheckCircle2 className="size-4" /> Quan approved</> : <><X className="size-4" /> Quan rejected</>}
+            </p>
+            <p className="opacity-90">{verdict.reason}</p>
+          </div>
+        )}
+        <div className="flex justify-end gap-2 mt-4">
+          <button onClick={onClose} className="rounded-full px-4 py-2 text-sm font-semibold bg-muted hover:bg-muted/70 transition">Cancel</button>
+          <button onClick={submit} disabled={submitting || files.length === 0}
+            className="rounded-full px-4 py-2 text-sm font-semibold bg-gradient-to-r from-emerald-500 to-primary text-primary-foreground disabled:opacity-50 hover:opacity-90 transition inline-flex items-center gap-2">
+            <Sparkles className="size-4" />
+            {submitting ? "Quan is reviewing…" : "Submit to Quan"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
