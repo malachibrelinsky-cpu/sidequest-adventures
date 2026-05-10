@@ -113,8 +113,80 @@ function ProfilePage() {
             {saving ? "Saving…" : "Save profile"}
           </button>
         </div>
+
+        <BadgesPanel userId={user.id} />
       </main>
       <SiteFooter />
+    </div>
+  );
+}
+
+function BadgesPanel({ userId }: { userId: string }) {
+  const [comps, setComps] = useState<CompletionRow[] | null>(null);
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    let alive = true;
+    supabase.from("quest_completions")
+      .select("created_at, difficulty, points")
+      .eq("user_id", userId)
+      .then(({ data }) => { if (alive) setComps((data ?? []) as CompletionRow[]); });
+    const tick = setInterval(() => setNow(new Date()), 1000);
+    return () => { alive = false; clearInterval(tick); };
+  }, [userId]);
+
+  if (!comps) return null;
+  const total = comps.reduce((s, c) => s + (c.points ?? 0), 0);
+  const streak = computeStreak(comps, now);
+  const best = bestEverStreak(comps);
+  const badges = computeBadges({ totalPoints: total, completions: comps, bestStreak: best });
+  const all: Badge[] = flatBadges(badges);
+
+  return (
+    <div className="bento-card p-6 mt-6">
+      <h2 className="text-2xl font-bold mb-4">Achievements</h2>
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className="rounded-xl bg-input/30 p-3 text-center">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Points</p>
+          <p className="text-xl font-bold text-primary">{total.toLocaleString()}</p>
+        </div>
+        <div className="rounded-xl bg-input/30 p-3 text-center">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Quests</p>
+          <p className="text-xl font-bold">{comps.length}</p>
+        </div>
+        <div className="rounded-xl bg-input/30 p-3 text-center">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1 justify-center"><Flame className="size-3 text-orange-400" /> Streak</p>
+          <p className="text-xl font-bold text-orange-400">{streak.alive ? streak.count : 0}</p>
+          {streak.alive && <p className="text-[10px] font-mono text-muted-foreground">{formatCountdown(streak.msRemaining)}</p>}
+        </div>
+      </div>
+
+      {badges.rank && (
+        <div className="mb-4 rounded-xl border border-primary/30 bg-primary/5 p-4 flex items-center gap-3">
+          <div className="text-3xl">{badges.rank.emoji}</div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-primary font-semibold">Current rank</p>
+            <p className="font-bold text-lg">{badges.rank.label}</p>
+            <p className="text-xs text-muted-foreground">{badges.rank.description}</p>
+          </div>
+        </div>
+      )}
+
+      {all.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Complete quests to earn badges and ranks.</p>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {all.map((b) => (
+            <div key={b.id} className="rounded-lg border border-border bg-input/20 p-3 flex items-center gap-2" title={b.description}>
+              <span className="text-2xl">{b.emoji}</span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold truncate">{b.label}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{b.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
