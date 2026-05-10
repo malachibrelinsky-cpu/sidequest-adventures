@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as QuestsRouteImport } from './routes/quests'
 import { Route as QuanRouteImport } from './routes/quan'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as FeedRouteImport } from './routes/feed'
@@ -34,6 +35,11 @@ const QuanRoute = QuanRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MapRoute = MapRouteImport.update({
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/feed': typeof FeedRoute
   '/how-it-works': typeof HowItWorksRoute
   '/map': typeof MapRoute
+  '/pricing': typeof PricingRoute
   '/profile': typeof ProfileRoute
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/feed': typeof FeedRoute
   '/how-it-works': typeof HowItWorksRoute
   '/map': typeof MapRoute
+  '/pricing': typeof PricingRoute
   '/profile': typeof ProfileRoute
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/feed': typeof FeedRoute
   '/how-it-works': typeof HowItWorksRoute
   '/map': typeof MapRoute
+  '/pricing': typeof PricingRoute
   '/profile': typeof ProfileRoute
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/how-it-works'
     | '/map'
+    | '/pricing'
     | '/profile'
     | '/quan'
     | '/quests'
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/how-it-works'
     | '/map'
+    | '/pricing'
     | '/profile'
     | '/quan'
     | '/quests'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/feed'
     | '/how-it-works'
     | '/map'
+    | '/pricing'
     | '/profile'
     | '/quan'
     | '/quests'
@@ -166,6 +178,7 @@ export interface RootRouteChildren {
   FeedRoute: typeof FeedRoute
   HowItWorksRoute: typeof HowItWorksRoute
   MapRoute: typeof MapRoute
+  PricingRoute: typeof PricingRoute
   ProfileRoute: typeof ProfileRoute
   QuanRoute: typeof QuanRoute
   QuestsRoute: typeof QuestsRoute
@@ -194,6 +207,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/map': {
@@ -262,6 +282,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeedRoute: FeedRoute,
   HowItWorksRoute: HowItWorksRoute,
   MapRoute: MapRoute,
+  PricingRoute: PricingRoute,
   ProfileRoute: ProfileRoute,
   QuanRoute: QuanRoute,
   QuestsRoute: QuestsRoute,
