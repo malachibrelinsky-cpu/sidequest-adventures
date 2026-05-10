@@ -1,0 +1,1 @@
+ALTER TABLE public.subscribers ADD COLUMN IF NOT EXISTS last_streak_revive_at TIMESTAMPTZ;

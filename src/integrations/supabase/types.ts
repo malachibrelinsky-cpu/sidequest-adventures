@@ -234,6 +234,7 @@ export type Database = {
           current_period_end: string | null
           id: string
           is_premium: boolean
+          last_streak_revive_at: string | null
           plan: string
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -245,6 +246,7 @@ export type Database = {
           current_period_end?: string | null
           id?: string
           is_premium?: boolean
+          last_streak_revive_at?: string | null
           plan?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -256,6 +258,7 @@ export type Database = {
           current_period_end?: string | null
           id?: string
           is_premium?: boolean
+          last_streak_revive_at?: string | null
           plan?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
