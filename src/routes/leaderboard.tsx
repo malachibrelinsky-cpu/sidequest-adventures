@@ -96,11 +96,24 @@ function LogCompletion({ onLogged, userId }: { onLogged: () => void; userId: str
   const submit = async () => {
     if (!title.trim()) { toast.error("Add a quest title"); return; }
     setSaving(true);
-    const points = DIFFICULTY_POINTS[difficulty];
+    const base = DIFFICULTY_POINTS[difficulty];
+    // Look up current streak to apply multiplier.
+    const { data: prior } = await supabase
+      .from("quest_completions")
+      .select("created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    const streak = computeStreak((prior ?? []) as CompletionRow[]);
+    // After this insert, streak count grows by 1 (or starts at 1 if dead).
+    const newStreakCount = streak.alive ? streak.count + 1 : 1;
+    const mult = streakMultiplier(newStreakCount);
+    const points = Math.round(base * mult);
     const { error } = await supabase.from("quest_completions").insert({ user_id: userId, title: title.trim().slice(0, 120), difficulty, points });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
-    toast.success(`+${points} points!`);
+    const bonus = points - base;
+    toast.success(bonus > 0 ? `+${points} points (+${bonus} streak bonus 🔥)` : `+${points} points!`);
     setTitle(""); setDifficulty("medium"); setOpen(false);
     onLogged();
   };
