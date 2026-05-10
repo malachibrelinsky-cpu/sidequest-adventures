@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
-import { Heart, MessageCircle, Image as ImageIcon, X, Send } from "lucide-react";
+import { Heart, MessageCircle, Image as ImageIcon, Send } from "lucide-react";
 import { z } from "zod";
 
 export const Route = createFileRoute("/feed")({
