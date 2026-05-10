@@ -24,7 +24,7 @@ const DIFFICULTY_STYLE: Record<Difficulty, string> = {
 
 type Profile = { id: string; display_name: string; avatar_url: string | null };
 type Comment = { id: string; body: string; created_at: string; user_id: string; profiles: Profile | null };
-type Post = { id: string; caption: string | null; image_urls: string[]; created_at: string; user_id: string; difficulty: Difficulty | null; points: number | null; profiles: Profile | null; comments: Comment[] };
+type Post = { id: string; caption: string | null; image_urls: string[]; created_at: string; user_id: string; difficulty: Difficulty | null; points: number | null; participants_needed: number | null; quest_time: string | null; location: string | null; profiles: Profile | null; comments: Comment[]; quest_participants: { user_id: string }[] };
 
 const captionSchema = z.string().trim().max(150);
 const commentSchema = z.string().trim().min(1).max(1000);
