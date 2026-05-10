@@ -214,7 +214,7 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
       <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
         <label className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary cursor-pointer transition">
           <ImageIcon className="size-5" /> Add photos (up to 4)
-          <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={onPick} />
+          <input ref={fileRef} type="file" accept="image/*,.heic,.heif,.avif,.bmp,.tiff,.svg" multiple className="hidden" onChange={onPick} />
         </label>
         <button
           onClick={submit} disabled={uploading || files.length === 0}
