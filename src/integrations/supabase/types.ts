@@ -134,7 +134,10 @@ export type Database = {
           difficulty: string | null
           id: string
           image_urls: string[]
+          location: string | null
+          participants_needed: number | null
           points: number | null
+          quest_time: string | null
           user_id: string
         }
         Insert: {
@@ -143,7 +146,10 @@ export type Database = {
           difficulty?: string | null
           id?: string
           image_urls?: string[]
+          location?: string | null
+          participants_needed?: number | null
           points?: number | null
+          quest_time?: string | null
           user_id: string
         }
         Update: {
@@ -152,7 +158,10 @@ export type Database = {
           difficulty?: string | null
           id?: string
           image_urls?: string[]
+          location?: string | null
+          participants_needed?: number | null
           points?: number | null
+          quest_time?: string | null
           user_id?: string
         }
         Relationships: [
@@ -234,6 +243,48 @@ export type Database = {
         }
         Relationships: []
       }
+      quest_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      quest_participants: {
+        Row: {
+          joined_at: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          joined_at?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          joined_at?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscribers: {
         Row: {
           created_at: string
@@ -280,6 +331,10 @@ export type Database = {
     Functions: {
       is_leaderboard_member: {
         Args: { _lb: string; _user: string }
+        Returns: boolean
+      }
+      is_quest_participant: {
+        Args: { _post: string; _user: string }
         Returns: boolean
       }
     }
