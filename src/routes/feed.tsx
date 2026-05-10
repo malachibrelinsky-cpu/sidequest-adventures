@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
-import { Heart, MessageCircle, Image as ImageIcon, Send, Trophy, Pencil, Trash2, Check, X, RotateCw, RotateCcw, Crop as CropIcon, ZoomIn, ZoomOut } from "lucide-react";
+import { Heart, MessageCircle, Image as ImageIcon, Send, Trophy, Pencil, Trash2, Check, X, RotateCw, RotateCcw, Crop as CropIcon, ZoomIn, ZoomOut, Users, MapPin, Clock } from "lucide-react";
 import { z } from "zod";
 
 export const Route = createFileRoute("/feed")({
@@ -24,7 +24,7 @@ const DIFFICULTY_STYLE: Record<Difficulty, string> = {
 
 type Profile = { id: string; display_name: string; avatar_url: string | null };
 type Comment = { id: string; body: string; created_at: string; user_id: string; profiles: Profile | null };
-type Post = { id: string; caption: string | null; image_urls: string[]; created_at: string; user_id: string; difficulty: Difficulty | null; points: number | null; profiles: Profile | null; comments: Comment[] };
+type Post = { id: string; caption: string | null; image_urls: string[]; created_at: string; user_id: string; difficulty: Difficulty | null; points: number | null; participants_needed: number | null; quest_time: string | null; location: string | null; profiles: Profile | null; comments: Comment[]; quest_participants: { user_id: string }[] };
 
 const captionSchema = z.string().trim().max(150);
 const commentSchema = z.string().trim().min(1).max(1000);
@@ -78,7 +78,7 @@ function FeedPage() {
   const load = async () => {
     const { data, error } = await supabase
       .from("posts")
-      .select("id, caption, image_urls, created_at, user_id, difficulty, points, profiles!posts_user_id_fkey(id, display_name, avatar_url), comments(id, body, created_at, user_id, profiles!comments_user_id_fkey(id, display_name, avatar_url))")
+      .select("id, caption, image_urls, created_at, user_id, difficulty, points, participants_needed, quest_time, location, profiles!posts_user_id_fkey(id, display_name, avatar_url), comments(id, body, created_at, user_id, profiles!comments_user_id_fkey(id, display_name, avatar_url)), quest_participants(user_id)")
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) { toast.error(error.message); return; }
@@ -144,6 +144,9 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
   const [isQuest, setIsQuest] = useState(false);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [points, setPoints] = useState<string>("25");
+  const [participantsNeeded, setParticipantsNeeded] = useState<string>("4");
+  const [questTime, setQuestTime] = useState<string>("");
+  const [location, setLocation] = useState<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
   const [cropIndex, setCropIndex] = useState<number | null>(null);
 
@@ -175,14 +178,19 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
 
   const submit = async () => {
     if (!user) return;
-    if (files.length === 0) { toast.error("Add at least one photo"); return; }
+    if (!isQuest && files.length === 0) { toast.error("Add at least one photo"); return; }
     const cap = captionSchema.safeParse(caption);
     if (!cap.success) { toast.error("Caption too long"); return; }
-    let questFields: { difficulty: Difficulty; points: number } | null = null;
+    let questFields: { difficulty: Difficulty; points: number; participants_needed: number; quest_time: string; location: string } | null = null;
     if (isQuest) {
       const parsed = pointsSchema.safeParse(Number(points));
       if (!parsed.success) { toast.error("Points must be a whole number from 0 to 150"); return; }
-      questFields = { difficulty, points: parsed.data };
+      const pn = Number(participantsNeeded);
+      if (!Number.isInteger(pn) || pn < 1 || pn > 50) { toast.error("Participants must be 1–50"); return; }
+      if (!questTime) { toast.error("Pick a time for the quest"); return; }
+      const loc = location.trim();
+      if (!loc) { toast.error("Add a location"); return; }
+      questFields = { difficulty, points: parsed.data, participants_needed: pn, quest_time: new Date(questTime).toISOString(), location: loc };
     }
     setUploading(true);
     try {
@@ -204,9 +212,13 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
         image_urls: urls,
         difficulty: questFields?.difficulty ?? null,
         points: questFields?.points ?? null,
+        participants_needed: questFields?.participants_needed ?? null,
+        quest_time: questFields?.quest_time ?? null,
+        location: questFields?.location ?? null,
       });
       if (error) throw error;
       setCaption(""); setFiles([]); setRotations([]); setIsQuest(false); setDifficulty("medium"); setPoints("25");
+      setParticipantsNeeded("4"); setQuestTime(""); setLocation("");
       if (fileRef.current) fileRef.current.value = "";
       toast.success("Posted!");
       onPosted();
@@ -294,20 +306,40 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
                 onChange={(e) => setPoints(e.target.value)}
                 className="w-32 rounded-lg bg-input/40 border border-border px-3 py-2 text-sm outline-none focus:border-primary" />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1"><Users className="size-3" /> Participants needed</p>
+                <input type="number" min={1} max={50} value={participantsNeeded}
+                  onChange={(e) => setParticipantsNeeded(e.target.value)}
+                  className="w-full rounded-lg bg-input/40 border border-border px-3 py-2 text-sm outline-none focus:border-primary" />
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1"><Clock className="size-3" /> When</p>
+                <input type="datetime-local" value={questTime}
+                  onChange={(e) => setQuestTime(e.target.value)}
+                  className="w-full rounded-lg bg-input/40 border border-border px-3 py-2 text-sm outline-none focus:border-primary" />
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1"><MapPin className="size-3" /> Location</p>
+              <input type="text" maxLength={200} value={location}
+                onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Dolores Park, SF"
+                className="w-full rounded-lg bg-input/40 border border-border px-3 py-2 text-sm outline-none focus:border-primary" />
+            </div>
           </div>
         )}
       </div>
 
       <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
         <label className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary cursor-pointer transition">
-          <ImageIcon className="size-5" /> Add photos (up to 4)
+          <ImageIcon className="size-5" /> {isQuest ? "Add photos (optional)" : "Add photos (up to 4)"}
           <input ref={fileRef} type="file" accept="image/*,.heic,.heif,.avif,.bmp,.tiff,.svg" multiple className="hidden" onChange={onPick} />
         </label>
         <button
-          onClick={submit} disabled={uploading || files.length === 0}
+          onClick={submit} disabled={uploading || (!isQuest && files.length === 0)}
           className="rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-5 py-2 font-semibold text-sm disabled:opacity-50 hover:opacity-90 transition"
         >
-          {uploading ? "Posting…" : "Share"}
+          {uploading ? "Posting…" : isQuest ? "Post quest" : "Share"}
         </button>
       </div>
     </div>
@@ -315,14 +347,33 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
 }
 
 function PostCard({ post, onChange, currentUserId }: { post: Post; onChange: () => void; currentUserId: string }) {
+  const navigate = useNavigate();
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [posting, setPosting] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editCaption, setEditCaption] = useState(post.caption ?? "");
   const [saving, setSaving] = useState(false);
+  const [accepting, setAccepting] = useState(false);
   const profile = post.profiles;
   const isOwner = post.user_id === currentUserId;
+  const isQuest = !!post.difficulty;
+  const participants = post.quest_participants ?? [];
+  const joined = participants.some((p) => p.user_id === currentUserId);
+  const full = post.participants_needed != null && participants.length >= post.participants_needed;
+
+  const acceptQuest = async () => {
+    if (joined) { navigate({ to: "/quest-chat/$questId", params: { questId: post.id } }); return; }
+    if (full) { toast.error("This quest is full"); return; }
+    setAccepting(true);
+    const { error } = await supabase.from("quest_participants").insert({ post_id: post.id, user_id: currentUserId });
+    setAccepting(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("You're in! Opening group chat…");
+    onChange();
+    navigate({ to: "/quest-chat/$questId", params: { questId: post.id } });
+  };
+
 
   const addComment = async () => {
     const parsed = commentSchema.safeParse(newComment);
@@ -383,6 +434,47 @@ function PostCard({ post, onChange, currentUserId }: { post: Post; onChange: () 
           </div>
         )}
       </div>
+      {isQuest && (post.participants_needed != null || post.quest_time || post.location) && (
+        <div className="mx-4 mb-2 rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-accent/10 p-4 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            {post.participants_needed != null && (
+              <div className="flex items-center gap-2">
+                <Users className="size-4 text-primary shrink-0" />
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Crew</p>
+                  <p className="font-semibold">{participants.length} / {post.participants_needed}</p>
+                </div>
+              </div>
+            )}
+            {post.quest_time && (
+              <div className="flex items-center gap-2">
+                <Clock className="size-4 text-primary shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">When</p>
+                  <p className="font-semibold truncate">{new Date(post.quest_time).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</p>
+                </div>
+              </div>
+            )}
+            {post.location && (
+              <div className="flex items-center gap-2">
+                <MapPin className="size-4 text-primary shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Where</p>
+                  <p className="font-semibold truncate">{post.location}</p>
+                </div>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={acceptQuest}
+            disabled={accepting || (full && !joined)}
+            className="w-full rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground py-2.5 font-semibold text-sm disabled:opacity-50 hover:opacity-90 transition inline-flex items-center justify-center gap-2"
+          >
+            <Trophy className="size-4" />
+            {joined ? "Open group chat" : full ? "Quest full" : accepting ? "Accepting…" : "Accept Quest"}
+          </button>
+        </div>
+      )}
       {post.image_urls.length > 0 && (
         <div className={`grid gap-1 ${post.image_urls.length === 1 ? "" : post.image_urls.length === 2 ? "grid-cols-2" : "grid-cols-2"}`}>
           {post.image_urls.map((url, i) => (
