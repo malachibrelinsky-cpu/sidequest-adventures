@@ -143,25 +143,32 @@ function LogCompletion({ onLogged, userId }: { onLogged: () => void; userId: str
   );
 }
 
+type RankRow = { profile: Profile; total: number; count: number; comps: CompletionRow[] };
+
 function useLeaderboardData(userIds: string[] | null) {
-  const [rows, setRows] = useState<{ profile: Profile; total: number; count: number }[]>([]);
+  const [rows, setRows] = useState<RankRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
     setLoading(true);
-    let q = supabase.from("quest_completions").select("user_id, points");
+    let q = supabase.from("quest_completions").select("user_id, points, difficulty, created_at");
     if (userIds) q = q.in("user_id", userIds);
     const { data: comps, error } = await q;
     if (error) { toast.error(error.message); setLoading(false); return; }
-    const totals = new Map<string, { total: number; count: number }>();
-    (comps ?? []).forEach((c: { user_id: string; points: number }) => {
-      const cur = totals.get(c.user_id) ?? { total: 0, count: 0 };
-      totals.set(c.user_id, { total: cur.total + c.points, count: cur.count + 1 });
+    const totals = new Map<string, { total: number; count: number; comps: CompletionRow[] }>();
+    (comps ?? []).forEach((c: { user_id: string; points: number; difficulty: string; created_at: string }) => {
+      const cur = totals.get(c.user_id) ?? { total: 0, count: 0, comps: [] };
+      cur.total += c.points; cur.count += 1;
+      cur.comps.push({ created_at: c.created_at, difficulty: c.difficulty, points: c.points });
+      totals.set(c.user_id, cur);
     });
     const ids = Array.from(totals.keys());
     if (ids.length === 0) { setRows([]); setLoading(false); return; }
     const { data: profiles } = await supabase.from("profiles").select("id, display_name, avatar_url").in("id", ids);
-    const merged = (profiles ?? []).map((p) => ({ profile: p as Profile, ...(totals.get(p.id) ?? { total: 0, count: 0 }) }));
+    const merged: RankRow[] = (profiles ?? []).map((p) => ({
+      profile: p as Profile,
+      ...(totals.get(p.id) ?? { total: 0, count: 0, comps: [] }),
+    }));
     merged.sort((a, b) => b.total - a.total);
     setRows(merged);
     setLoading(false);
