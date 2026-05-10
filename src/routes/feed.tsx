@@ -256,6 +256,15 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
         </div>
       )}
 
+      {cropIndex !== null && files[cropIndex] && (
+        <CropModal
+          file={files[cropIndex]}
+          rotation={rotations[cropIndex] ?? 0}
+          onCancel={() => setCropIndex(null)}
+          onApply={(out) => applyCrop(cropIndex, out)}
+        />
+      )}
+
       <div className="mt-3 pt-3 border-t border-border">
         <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
           <input type="checkbox" checked={isQuest} onChange={(e) => setIsQuest(e.target.checked)}
