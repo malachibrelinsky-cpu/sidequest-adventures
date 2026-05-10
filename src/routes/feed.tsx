@@ -467,14 +467,39 @@ function PostCard({ post, onChange, currentUserId }: { post: Post; onChange: () 
               </div>
             )}
           </div>
-          <button
-            onClick={acceptQuest}
-            disabled={accepting || (full && !joined)}
-            className="w-full rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground py-2.5 font-semibold text-sm disabled:opacity-50 hover:opacity-90 transition inline-flex items-center justify-center gap-2"
-          >
-            <Trophy className="size-4" />
-            {joined ? "Open group chat" : full ? "Quest full" : accepting ? "Accepting…" : "Accept Quest"}
-          </button>
+          {isCompleted ? (
+            <div className="w-full rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 py-2.5 font-semibold text-sm inline-flex items-center justify-center gap-2">
+              <CheckCircle2 className="size-4" />
+              Completed · {post.points ?? 0} pts awarded to crew
+            </div>
+          ) : isOwner ? (
+            <button
+              onClick={() => setShowCompleteModal(true)}
+              className="w-full rounded-full bg-gradient-to-r from-emerald-500 to-primary text-primary-foreground py-2.5 font-semibold text-sm hover:opacity-90 transition inline-flex items-center justify-center gap-2"
+            >
+              <CheckCircle2 className="size-4" />
+              Quest is Completed
+            </button>
+          ) : (
+            <button
+              onClick={acceptQuest}
+              disabled={accepting || (full && !joined)}
+              className="w-full rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground py-2.5 font-semibold text-sm disabled:opacity-50 hover:opacity-90 transition inline-flex items-center justify-center gap-2"
+            >
+              <Trophy className="size-4" />
+              {joined ? "Open group chat" : full ? "Quest full" : accepting ? "Accepting…" : "Accept Quest"}
+            </button>
+          )}
+          {isCompleted && post.evidence_urls.length > 0 && (
+            <div className="grid grid-cols-3 gap-1 mt-2">
+              {post.evidence_urls.slice(0, 6).map((url, i) => {
+                const isVideo = /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url);
+                return isVideo
+                  ? <video key={i} src={url} controls className="w-full aspect-square object-cover rounded" />
+                  : <img key={i} src={url} alt="" loading="lazy" className="w-full aspect-square object-cover rounded" />;
+              })}
+            </div>
+          )}
         </div>
       )}
       {post.image_urls.length > 0 && (
