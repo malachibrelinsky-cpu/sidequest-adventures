@@ -355,9 +355,11 @@ function PostCard({ post, onChange, currentUserId }: { post: Post; onChange: () 
   const [editCaption, setEditCaption] = useState(post.caption ?? "");
   const [saving, setSaving] = useState(false);
   const [accepting, setAccepting] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
   const profile = post.profiles;
   const isOwner = post.user_id === currentUserId;
   const isQuest = !!post.difficulty;
+  const isCompleted = !!post.completed_at;
   const participants = post.quest_participants ?? [];
   const joined = participants.some((p) => p.user_id === currentUserId);
   const full = post.participants_needed != null && participants.length >= post.participants_needed;
