@@ -347,14 +347,33 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
 }
 
 function PostCard({ post, onChange, currentUserId }: { post: Post; onChange: () => void; currentUserId: string }) {
+  const navigate = useNavigate();
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [posting, setPosting] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editCaption, setEditCaption] = useState(post.caption ?? "");
   const [saving, setSaving] = useState(false);
+  const [accepting, setAccepting] = useState(false);
   const profile = post.profiles;
   const isOwner = post.user_id === currentUserId;
+  const isQuest = !!post.difficulty;
+  const participants = post.quest_participants ?? [];
+  const joined = participants.some((p) => p.user_id === currentUserId);
+  const full = post.participants_needed != null && participants.length >= post.participants_needed;
+
+  const acceptQuest = async () => {
+    if (joined) { navigate({ to: "/quest-chat/$questId", params: { questId: post.id } }); return; }
+    if (full) { toast.error("This quest is full"); return; }
+    setAccepting(true);
+    const { error } = await supabase.from("quest_participants").insert({ post_id: post.id, user_id: currentUserId });
+    setAccepting(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("You're in! Opening group chat…");
+    onChange();
+    navigate({ to: "/quest-chat/$questId", params: { questId: post.id } });
+  };
+
 
   const addComment = async () => {
     const parsed = commentSchema.safeParse(newComment);
