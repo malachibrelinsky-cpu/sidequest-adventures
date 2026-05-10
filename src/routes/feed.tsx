@@ -242,6 +242,10 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
                   className="p-1 rounded-full bg-black/60 text-white hover:bg-black/80">
                   <RotateCw className="size-3.5" />
                 </button>
+                <button type="button" onClick={() => setCropIndex(i)} title="Crop & zoom"
+                  className="p-1 rounded-full bg-black/60 text-white hover:bg-black/80">
+                  <CropIcon className="size-3.5" />
+                </button>
                 <button type="button" onClick={() => removeFile(i)} title="Remove"
                   className="p-1 rounded-full bg-black/60 text-white hover:bg-destructive">
                   <X className="size-3.5" />
