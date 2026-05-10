@@ -41,7 +41,7 @@ function FeedPage() {
   const load = async () => {
     const { data, error } = await supabase
       .from("posts")
-      .select("id, caption, image_urls, created_at, user_id, profiles!posts_user_id_fkey(id, display_name, avatar_url), comments(id, body, created_at, user_id, profiles!comments_user_id_fkey(id, display_name, avatar_url))")
+      .select("id, caption, image_urls, created_at, user_id, difficulty, points, profiles!posts_user_id_fkey(id, display_name, avatar_url), comments(id, body, created_at, user_id, profiles!comments_user_id_fkey(id, display_name, avatar_url))")
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) { toast.error(error.message); return; }
