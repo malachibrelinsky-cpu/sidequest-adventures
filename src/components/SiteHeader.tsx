@@ -1,9 +1,11 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Compass, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { usePremium } from "@/hooks/use-premium";
 
 export function SiteHeader() {
   const { user, signOut } = useAuth();
+  const { isPremium } = usePremium();
   const navigate = useNavigate();
 
   return (
