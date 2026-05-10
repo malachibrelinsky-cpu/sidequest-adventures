@@ -18,9 +18,8 @@ export function SiteHeader() {
           <span className="font-display font-bold text-xl tracking-tight">SideQuest</span>
         </Link>
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
-          <Link to="/quests" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">Quests</Link>
+          <Link to="/feed" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">Quests & Feed</Link>
           <Link to="/map" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">Map</Link>
-          <Link to="/feed" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">Feed</Link>
           {user && <Link to="/leaderboard" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">Leaderboard</Link>}
           {user && <Link to="/messages" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">Messages</Link>}
           {user && <Link to="/quan" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition inline-flex items-center gap-1">Quan <span className="text-[10px] uppercase tracking-wider rounded bg-primary/20 text-primary px-1.5 py-0.5 font-bold">AI</span></Link>}
