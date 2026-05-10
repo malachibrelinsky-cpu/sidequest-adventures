@@ -5,7 +5,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { usePremium } from "@/hooks/use-premium";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
-import { Trophy, Lock, Plus, Users, Copy, LogOut, Sparkles, Check } from "lucide-react";
+import { Trophy, Lock, Plus, Users, Copy, LogOut, Sparkles, Check, Flame } from "lucide-react";
+import { computeStreak, streakMultiplier, formatCountdown, computeBadges, flatBadges, bestEverStreak, type CompletionRow } from "@/lib/streaks";
 
 export const Route = createFileRoute("/leaderboard")({
   head: () => ({
@@ -42,10 +43,12 @@ function LeaderboardPage() {
           <div>
             <p className="text-primary font-semibold text-sm mb-2 inline-flex items-center gap-2"><Trophy className="size-4" /> LEADERBOARD</p>
             <h1 className="text-4xl md:text-5xl font-bold mb-2">Earn points. Outpace your crew.</h1>
-            <p className="text-muted-foreground">Log every quest you finish — harder quests = more points.</p>
+            <p className="text-muted-foreground">Harder quests = more points. Keep your streak alive for a multiplier.</p>
           </div>
           <LogCompletion onLogged={() => window.dispatchEvent(new Event("completions:refresh"))} userId={user.id} />
         </div>
+
+        <StreakBanner userId={user.id} />
 
         <div className="flex gap-2 border-b border-border mb-6">
           <TabBtn active={tab === "world"} onClick={() => setTab("world")}>🌍 Worldwide</TabBtn>
@@ -93,11 +96,24 @@ function LogCompletion({ onLogged, userId }: { onLogged: () => void; userId: str
   const submit = async () => {
     if (!title.trim()) { toast.error("Add a quest title"); return; }
     setSaving(true);
-    const points = DIFFICULTY_POINTS[difficulty];
+    const base = DIFFICULTY_POINTS[difficulty];
+    // Look up current streak to apply multiplier.
+    const { data: prior } = await supabase
+      .from("quest_completions")
+      .select("created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    const streak = computeStreak((prior ?? []) as CompletionRow[]);
+    // After this insert, streak count grows by 1 (or starts at 1 if dead).
+    const newStreakCount = streak.alive ? streak.count + 1 : 1;
+    const mult = streakMultiplier(newStreakCount);
+    const points = Math.round(base * mult);
     const { error } = await supabase.from("quest_completions").insert({ user_id: userId, title: title.trim().slice(0, 120), difficulty, points });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
-    toast.success(`+${points} points!`);
+    const bonus = points - base;
+    toast.success(bonus > 0 ? `+${points} points (+${bonus} streak bonus 🔥)` : `+${points} points!`);
     setTitle(""); setDifficulty("medium"); setOpen(false);
     onLogged();
   };
@@ -127,25 +143,32 @@ function LogCompletion({ onLogged, userId }: { onLogged: () => void; userId: str
   );
 }
 
+type RankRow = { profile: Profile; total: number; count: number; comps: CompletionRow[] };
+
 function useLeaderboardData(userIds: string[] | null) {
-  const [rows, setRows] = useState<{ profile: Profile; total: number; count: number }[]>([]);
+  const [rows, setRows] = useState<RankRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
     setLoading(true);
-    let q = supabase.from("quest_completions").select("user_id, points");
+    let q = supabase.from("quest_completions").select("user_id, points, difficulty, created_at");
     if (userIds) q = q.in("user_id", userIds);
     const { data: comps, error } = await q;
     if (error) { toast.error(error.message); setLoading(false); return; }
-    const totals = new Map<string, { total: number; count: number }>();
-    (comps ?? []).forEach((c: { user_id: string; points: number }) => {
-      const cur = totals.get(c.user_id) ?? { total: 0, count: 0 };
-      totals.set(c.user_id, { total: cur.total + c.points, count: cur.count + 1 });
+    const totals = new Map<string, { total: number; count: number; comps: CompletionRow[] }>();
+    (comps ?? []).forEach((c: { user_id: string; points: number; difficulty: string; created_at: string }) => {
+      const cur = totals.get(c.user_id) ?? { total: 0, count: 0, comps: [] };
+      cur.total += c.points; cur.count += 1;
+      cur.comps.push({ created_at: c.created_at, difficulty: c.difficulty, points: c.points });
+      totals.set(c.user_id, cur);
     });
     const ids = Array.from(totals.keys());
     if (ids.length === 0) { setRows([]); setLoading(false); return; }
     const { data: profiles } = await supabase.from("profiles").select("id, display_name, avatar_url").in("id", ids);
-    const merged = (profiles ?? []).map((p) => ({ profile: p as Profile, ...(totals.get(p.id) ?? { total: 0, count: 0 }) }));
+    const merged: RankRow[] = (profiles ?? []).map((p) => ({
+      profile: p as Profile,
+      ...(totals.get(p.id) ?? { total: 0, count: 0, comps: [] }),
+    }));
     merged.sort((a, b) => b.total - a.total);
     setRows(merged);
     setLoading(false);
@@ -286,7 +309,7 @@ function PrivateBoardView({ lb, userId, onLeave }: { lb: Leaderboard; userId: st
   );
 }
 
-function RankingTable({ rows, loading, currentUserId, emptyText }: { rows: { profile: Profile; total: number; count: number }[]; loading: boolean; currentUserId: string; emptyText: string }) {
+function RankingTable({ rows, loading, currentUserId, emptyText }: { rows: RankRow[]; loading: boolean; currentUserId: string; emptyText: string }) {
   const medals = useMemo(() => ["🥇", "🥈", "🥉"], []);
   if (loading) return <div className="bento-card p-10 text-center text-muted-foreground">Loading rankings…</div>;
   if (rows.length === 0) return <div className="bento-card p-10 text-center text-muted-foreground">{emptyText}</div>;
@@ -294,6 +317,9 @@ function RankingTable({ rows, loading, currentUserId, emptyText }: { rows: { pro
     <div className="bento-card overflow-hidden">
       {rows.map((r, i) => {
         const isMe = r.profile.id === currentUserId;
+        const badges = computeBadges({ totalPoints: r.total, completions: r.comps });
+        const streak = computeStreak(r.comps);
+        const topBadges = flatBadges(badges).slice(0, 3);
         return (
           <div key={r.profile.id} className={`flex items-center gap-4 px-5 py-4 border-b border-border last:border-0 ${isMe ? "bg-primary/5" : ""}`}>
             <div className="w-10 text-center font-bold text-lg">{i < 3 ? medals[i] : `#${i + 1}`}</div>
@@ -302,8 +328,16 @@ function RankingTable({ rows, loading, currentUserId, emptyText }: { rows: { pro
               : <div className="size-10 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground font-bold">{r.profile.display_name[0]?.toUpperCase()}</div>
             }
             <div className="flex-1 min-w-0">
-              <p className="font-semibold truncate">{r.profile.display_name}{isMe && <span className="ml-2 text-xs text-primary">(you)</span>}</p>
-              <p className="text-xs text-muted-foreground">{r.count} {r.count === 1 ? "quest" : "quests"} completed</p>
+              <p className="font-semibold truncate flex items-center gap-2 flex-wrap">
+                {r.profile.display_name}
+                {badges.rank && <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20" title={badges.rank.description}>{badges.rank.emoji} {badges.rank.label}</span>}
+                {isMe && <span className="text-xs text-primary">(you)</span>}
+              </p>
+              <p className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
+                <span>{r.count} {r.count === 1 ? "quest" : "quests"}</span>
+                {streak.alive && <span className="inline-flex items-center gap-1 text-orange-400"><Flame className="size-3" />{streak.count}-day streak</span>}
+                <span className="flex gap-1">{topBadges.filter(b => b.id !== badges.rank?.id).map(b => <span key={b.id} title={`${b.label} — ${b.description}`}>{b.emoji}</span>)}</span>
+              </p>
             </div>
             <div className="text-right">
               <p className="text-xl font-bold text-primary">{r.total.toLocaleString()}</p>
@@ -315,3 +349,58 @@ function RankingTable({ rows, loading, currentUserId, emptyText }: { rows: { pro
     </div>
   );
 }
+
+function StreakBanner({ userId }: { userId: string }) {
+  const [comps, setComps] = useState<CompletionRow[] | null>(null);
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      const { data } = await supabase
+        .from("quest_completions")
+        .select("created_at, difficulty, points")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (alive) setComps((data ?? []) as CompletionRow[]);
+    };
+    load();
+    const handler = () => load();
+    window.addEventListener("completions:refresh", handler);
+    const tick = setInterval(() => setNow(new Date()), 1000);
+    return () => { alive = false; window.removeEventListener("completions:refresh", handler); clearInterval(tick); };
+  }, [userId]);
+
+  if (!comps) return null;
+  const streak = computeStreak(comps, now);
+  const best = bestEverStreak(comps);
+  const nextMult = streakMultiplier(streak.alive ? streak.count + 1 : 1);
+
+  return (
+    <div className="bento-card p-5 mb-6 flex items-center gap-5 flex-wrap">
+      <div className={`size-14 rounded-2xl grid place-items-center text-2xl ${streak.alive ? "bg-gradient-to-br from-orange-500/30 to-red-500/20 text-orange-400" : "bg-muted/40 text-muted-foreground"}`}>
+        <Flame className="size-7" />
+      </div>
+      <div className="flex-1 min-w-[180px]">
+        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-0.5">{streak.alive ? "Current streak" : "Streak"}</p>
+        <p className="text-2xl font-bold">
+          {streak.alive ? `${streak.count}` : "0"}
+          <span className="text-sm font-normal text-muted-foreground ml-2">{streak.alive ? "in a row" : "— complete a quest to start one"}</span>
+        </p>
+        {best > 0 && <p className="text-xs text-muted-foreground mt-0.5">Best ever: {best}</p>}
+      </div>
+      {streak.alive && (
+        <div className="text-center">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground mb-0.5">Expires in</p>
+          <p className="text-2xl font-mono font-bold tabular-nums text-orange-400">{formatCountdown(streak.msRemaining)}</p>
+        </div>
+      )}
+      <div className="text-center">
+        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-0.5">Next quest bonus</p>
+        <p className="text-2xl font-bold text-primary">{nextMult.toFixed(2)}×</p>
+      </div>
+    </div>
+  );
+}
+
