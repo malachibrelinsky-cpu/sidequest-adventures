@@ -145,6 +145,13 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [points, setPoints] = useState<string>("25");
   const fileRef = useRef<HTMLInputElement>(null);
+  const [cropIndex, setCropIndex] = useState<number | null>(null);
+
+  const applyCrop = async (i: number, croppedFile: File) => {
+    setFiles((fs) => fs.map((f, idx) => (idx === i ? croppedFile : f)));
+    setRotations((rs) => rs.map((r, idx) => (idx === i ? 0 : r)));
+    setCropIndex(null);
+  };
 
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.target.files ?? []).slice(0, 4);
