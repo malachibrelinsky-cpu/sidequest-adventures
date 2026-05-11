@@ -282,11 +282,23 @@ function LeafletMap({ me, members, quests, onSelect, onSelectQuest }: { me: Memb
       if (!layerRef.current) return;
       layerRef.current.clearLayers();
 
-      const FIVE_MILES_M = 8046.72;
+      const RADIUS_M = 4023.36; // 2.5 mi (5 mi diameter)
       const DEFAULT_COLOR = "#2dd4a8";
-      const addUserCircle = (lat: number, lon: number, label: string, isMe: boolean, color: string, onClick?: () => void) => {
-        const circle = L.circle([lat, lon], {
-          radius: FIVE_MILES_M,
+      // Stable pseudo-random offset per user so the circle covers their area without pinpointing them
+      const offsetFor = (seed: string, lat: number) => {
+        let h = 0;
+        for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
+        const a = ((h & 0xffff) / 0xffff) * Math.PI * 2;
+        const r = (((h >>> 16) & 0xffff) / 0xffff) * 0.6 + 0.3; // 30%-90% of radius
+        const dMeters = RADIUS_M * r;
+        const dLat = (dMeters * Math.cos(a)) / 111320;
+        const dLon = (dMeters * Math.sin(a)) / (111320 * Math.cos((lat * Math.PI) / 180));
+        return [dLat, dLon] as const;
+      };
+      const addUserCircle = (lat: number, lon: number, label: string, isMe: boolean, color: string, seed: string, onClick?: () => void) => {
+        const [dLat, dLon] = offsetFor(seed, lat);
+        const circle = L.circle([lat + dLat, lon + dLon], {
+          radius: RADIUS_M,
           color,
           weight: 2,
           opacity: 0.75,
