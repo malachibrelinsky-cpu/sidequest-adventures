@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
-import { MapPin, Navigation, Sparkles, MessageCircle } from "lucide-react";
+import { MapPin, Navigation, Sparkles, MessageCircle, Trophy, Users, Clock } from "lucide-react";
 
 export const Route = createFileRoute("/map")({
   head: () => ({
