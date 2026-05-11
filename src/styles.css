@@ -139,3 +139,19 @@
     border-color: var(--mint);
   }
 }
+
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+.high-contrast {
+  --foreground: oklch(0.99 0 0);
+  --background: oklch(0.08 0 0);
+  --muted-foreground: oklch(0.85 0 0);
+  --border: oklch(0.6 0 0);
+}
