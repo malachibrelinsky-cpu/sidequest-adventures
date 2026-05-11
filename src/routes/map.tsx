@@ -23,6 +23,7 @@ type Member = {
   id: string; display_name: string; avatar_url: string | null;
   city: string | null; bio: string | null;
   latitude: number | null; longitude: number | null;
+  map_color: string | null;
 };
 
 type Quest = {
