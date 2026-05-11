@@ -86,6 +86,13 @@ function FeedPage() {
   const [fetching, setFetching] = useState(true);
   const [tab, setTab] = useState<Tab>(isQuestsRoute ? "quests" : "updates");
   const [userLoc, setUserLoc] = useState<{ lat: number; lon: number } | null>(null);
+  // Quests-route-only controls
+  const [diffFilter, setDiffFilter] = useState<Set<Difficulty>>(new Set());
+  const [maxDistance, setMaxDistance] = useState<number>(0); // 0 = any
+  const [timeWindow, setTimeWindow] = useState<"any" | "today" | "week">("any");
+  const [onlyJoinable, setOnlyJoinable] = useState(false);
+  const [questSort, setQuestSort] = useState<"nearest" | "soonest" | "points" | "newest">("nearest");
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
 
