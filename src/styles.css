@@ -96,13 +96,19 @@
     pointer-events: none;
     z-index: 0;
     background-image:
-      radial-gradient(ellipse at center, oklch(0.18 0.04 240 / 0.55) 0%, oklch(0.18 0.04 240 / 0.85) 55%, oklch(0.14 0.04 240 / 0.95) 100%),
-      url("/compass-bg.png");
-    background-repeat: no-repeat, no-repeat;
-    background-position: center, center;
-    background-size: cover, min(85vmin, 900px) min(85vmin, 900px);
+      radial-gradient(ellipse at center, oklch(0.18 0.04 240 / 0.55) 0%, oklch(0.18 0.04 240 / 0.85) 55%, oklch(0.14 0.04 240 / 0.95) 100%);
     opacity: 0.9;
-    mix-blend-mode: normal;
+  }
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-color: var(--compass-color, var(--primary));
+    -webkit-mask: url("/compass-bg.png") center / min(85vmin, 900px) min(85vmin, 900px) no-repeat;
+            mask: url("/compass-bg.png") center / min(85vmin, 900px) min(85vmin, 900px) no-repeat;
+    opacity: var(--compass-opacity, 0.35);
   }
   body > * {
     position: relative;
