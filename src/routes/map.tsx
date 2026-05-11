@@ -48,7 +48,7 @@ function MapPage() {
 
   const load = async () => {
     if (!user) return;
-    const { data } = await supabase.from("profiles").select("id, display_name, avatar_url, city, bio, latitude, longitude");
+    const { data } = await supabase.from("profiles").select("id, display_name, avatar_url, city, bio, latitude, longitude, map_color");
     const list = (data ?? []) as Member[];
     setMembers(list.filter((m) => m.id !== user.id && m.latitude != null && m.longitude != null));
     setMe(list.find((m) => m.id === user.id) ?? null);
