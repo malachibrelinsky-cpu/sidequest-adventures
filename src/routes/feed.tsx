@@ -288,10 +288,10 @@ function FeedPage() {
         ) : (
           <div className="sticky top-2 z-10 mt-8 mb-5">
             <div className="flex gap-1 p-1 rounded-full bg-card/80 backdrop-blur border border-border shadow-sm">
-              {(["all", "quests", "updates"] as const).map((t) => (
+              {(["all", "updates"] as const).map((t) => (
                 <button key={t} onClick={() => setTab(t)}
                   className={`flex-1 px-4 py-2 rounded-full text-sm font-semibold capitalize transition inline-flex items-center justify-center gap-1.5 ${tab === t ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_0_20px_-5px_var(--mint,theme(colors.primary.DEFAULT))]" : "text-muted-foreground hover:text-foreground"}`}>
-                  <span>{t === "quests" ? "🎯 Sidequests" : t === "updates" ? "📸 Updates" : "✨ All"}</span>
+                  <span>{t === "updates" ? "📸 Updates" : "✨ All"}</span>
                   <span className={`text-[10px] rounded-full px-1.5 py-0.5 ${tab === t ? "bg-black/20" : "bg-muted/50"}`}>{counts[t]}</span>
                 </button>
               ))}
