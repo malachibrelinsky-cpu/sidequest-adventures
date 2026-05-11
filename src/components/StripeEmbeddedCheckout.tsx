@@ -5,7 +5,9 @@ import { createCheckoutSession } from "@/utils/payments.functions";
 interface StripeEmbeddedCheckoutProps {
   priceId: string;
   quantity?: number;
+  /** @deprecated identity is derived server-side from the auth token */
   customerEmail?: string;
+  /** @deprecated identity is derived server-side from the auth token */
   userId?: string;
   returnUrl?: string;
 }
@@ -13,8 +15,6 @@ interface StripeEmbeddedCheckoutProps {
 export function StripeEmbeddedCheckout({
   priceId,
   quantity,
-  customerEmail,
-  userId,
   returnUrl,
 }: StripeEmbeddedCheckoutProps) {
   const fetchClientSecret = async (): Promise<string> => {
@@ -22,8 +22,6 @@ export function StripeEmbeddedCheckout({
       data: {
         priceId,
         quantity,
-        customerEmail,
-        userId,
         returnUrl: returnUrl || window.location.href,
         environment: getStripeEnvironment(),
       },

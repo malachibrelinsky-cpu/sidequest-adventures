@@ -12,6 +12,25 @@ You do two things great:
 1) Casual chat — be a fun thinking partner.
 2) Brainstorm sidequest ideas — short (under ~3 hours), local, low-cost, safe, doable with a stranger you just matched with. When asked, return a punchy title + 1–2 sentence pitch + suggested time/place vibe. Offer 3 ideas unless asked otherwise.`;
 
+const MAX_MESSAGES = 20;
+const MAX_CONTENT_CHARS = 4000;
+
+function sanitizeMessages(input: unknown): { role: "user" | "assistant"; content: string }[] {
+  if (!Array.isArray(input)) return [];
+  const cleaned: { role: "user" | "assistant"; content: string }[] = [];
+  for (const m of input) {
+    if (!m || typeof m !== "object") continue;
+    const role = (m as { role?: unknown }).role;
+    const content = (m as { content?: unknown }).content;
+    if (role !== "user" && role !== "assistant") continue;
+    if (typeof content !== "string") continue;
+    const trimmed = content.slice(0, MAX_CONTENT_CHARS);
+    if (!trimmed.trim()) continue;
+    cleaned.push({ role, content: trimmed });
+  }
+  return cleaned.slice(-MAX_MESSAGES);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -31,7 +50,10 @@ Deno.serve(async (req) => {
       .from("subscribers").select("is_premium").eq("user_id", user.id).maybeSingle();
     if (!sub?.is_premium) return json({ error: "Quan is a Premium feature." }, 403);
 
-    const { messages } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const messages = sanitizeMessages((body as { messages?: unknown }).messages);
+    if (!messages.length) return json({ error: "No valid messages provided" }, 400);
+
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) return json({ error: "LOVABLE_API_KEY missing" }, 500);
 
@@ -41,7 +63,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         stream: true,
-        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...(messages ?? [])],
+        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
       }),
     });
 

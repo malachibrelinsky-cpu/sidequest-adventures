@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import type Stripe from "stripe";
 import { type StripeEnv, createStripeClient } from "@/lib/stripe.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 async function resolveOrCreateCustomer(
   stripe: ReturnType<typeof createStripeClient>,
@@ -36,18 +37,27 @@ async function resolveOrCreateCustomer(
 }
 
 export const createCheckoutSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: {
     priceId: string;
     quantity?: number;
-    customerEmail?: string;
-    userId?: string;
     returnUrl: string;
     environment: StripeEnv;
   }) => {
     if (!/^[a-zA-Z0-9_-]+$/.test(data.priceId)) throw new Error("Invalid priceId");
+    if (typeof data.returnUrl !== "string" || !/^https?:\/\//.test(data.returnUrl)) {
+      throw new Error("Invalid returnUrl");
+    }
+    if (data.quantity !== undefined && (!Number.isInteger(data.quantity) || data.quantity < 1 || data.quantity > 100)) {
+      throw new Error("Invalid quantity");
+    }
     return data;
   })
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    // Always derive identity from the verified JWT — never trust client input.
+    const userId = context.userId;
+    const email = typeof context.claims.email === "string" ? context.claims.email : undefined;
+
     const stripe = createStripeClient(data.environment);
 
     const prices = await stripe.prices.list({ lookup_keys: [data.priceId] });
@@ -55,23 +65,16 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     const stripePrice = prices.data[0];
     const isRecurring = stripePrice.type === "recurring";
 
-    const customerId = (data.customerEmail || data.userId)
-      ? await resolveOrCreateCustomer(stripe, {
-          email: data.customerEmail,
-          userId: data.userId,
-        })
-      : undefined;
+    const customerId = await resolveOrCreateCustomer(stripe, { email, userId });
 
     const session = await stripe.checkout.sessions.create({
       line_items: [{ price: stripePrice.id, quantity: data.quantity || 1 }],
       mode: isRecurring ? "subscription" : "payment",
       ui_mode: "embedded_page",
       return_url: data.returnUrl,
-      ...(customerId && { customer: customerId }),
-      ...(data.userId && {
-        metadata: { userId: data.userId, managed_payments: "true" },
-        ...(isRecurring && { subscription_data: { metadata: { userId: data.userId } } }),
-      }),
+      customer: customerId,
+      metadata: { userId, managed_payments: "true" },
+      ...(isRecurring && { subscription_data: { metadata: { userId } } }),
       // Enable Stripe end-to-end compliance handling (tax + fraud + disputes + support)
       managed_payments: { enabled: true },
     } as Stripe.Checkout.SessionCreateParams & { managed_payments: { enabled: boolean } });
