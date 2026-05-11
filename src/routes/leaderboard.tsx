@@ -6,7 +6,7 @@ import { usePremium } from "@/hooks/use-premium";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
 import { Trophy, Lock, Plus, Users, Copy, LogOut, Sparkles, Check, Flame } from "lucide-react";
-import { computeStreak, streakMultiplier, formatCountdown, computeBadges, flatBadges, bestEverStreak, STREAK_WINDOW_MS, type CompletionRow } from "@/lib/streaks";
+import { computeStreak, streakMultiplier, formatCountdown, computeBadges, flatBadges, bestEverStreak, type CompletionRow } from "@/lib/streaks";
 
 export const Route = createFileRoute("/leaderboard")({
   head: () => ({
