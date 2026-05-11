@@ -74,14 +74,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "SideQuest" },
+      { name: "description", content: "A program that lets anyone anywhere meet with locals and go on quick SideQuests" },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "SideQuest" },
+      { property: "og:description", content: "A program that lets anyone anywhere meet with locals and go on quick SideQuests" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "SideQuest" },
+      { name: "twitter:description", content: "A program that lets anyone anywhere meet with locals and go on quick SideQuests" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/ZjDCyyw6AZS1N8RGbM9oxnFb9kT2/social-images/social-1778461117895-Theater_Aurafarm_teal.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/ZjDCyyw6AZS1N8RGbM9oxnFb9kT2/social-images/social-1778461117895-Theater_Aurafarm_teal.webp" },
     ],
     links: [
       {
