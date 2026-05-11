@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as QuestsRouteImport } from './routes/quests'
 import { Route as QuanRouteImport } from './routes/quan'
 import { Route as ProfileRouteImport } from './routes/profile'
@@ -28,6 +29,11 @@ import { Route as QuestChatQuestIdRouteImport } from './routes/quest-chat.$quest
 import { Route as MessagesUserIdRouteImport } from './routes/messages.$userId'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const QuestsRoute = QuestsRouteImport.update({
   id: '/quests',
   path: '/quests',
@@ -133,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
+  '/settings': typeof SettingsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/messages/$userId': typeof MessagesUserIdRoute
   '/quest-chat/$questId': typeof QuestChatQuestIdRoute
@@ -153,6 +160,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
+  '/settings': typeof SettingsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/messages/$userId': typeof MessagesUserIdRoute
   '/quest-chat/$questId': typeof QuestChatQuestIdRoute
@@ -174,6 +182,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
+  '/settings': typeof SettingsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/messages/$userId': typeof MessagesUserIdRoute
   '/quest-chat/$questId': typeof QuestChatQuestIdRoute
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/quan'
     | '/quests'
+    | '/settings'
     | '/checkout/return'
     | '/messages/$userId'
     | '/quest-chat/$questId'
@@ -216,6 +226,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/quan'
     | '/quests'
+    | '/settings'
     | '/checkout/return'
     | '/messages/$userId'
     | '/quest-chat/$questId'
@@ -236,6 +247,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/quan'
     | '/quests'
+    | '/settings'
     | '/checkout/return'
     | '/messages/$userId'
     | '/quest-chat/$questId'
@@ -257,6 +269,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   QuanRoute: typeof QuanRoute
   QuestsRoute: typeof QuestsRoute
+  SettingsRoute: typeof SettingsRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   MessagesUserIdRoute: typeof MessagesUserIdRoute
   QuestChatQuestIdRoute: typeof QuestChatQuestIdRoute
@@ -266,6 +279,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/quests': {
       id: '/quests'
       path: '/quests'
@@ -409,6 +429,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   QuanRoute: QuanRoute,
   QuestsRoute: QuestsRoute,
+  SettingsRoute: SettingsRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   MessagesUserIdRoute: MessagesUserIdRoute,
   QuestChatQuestIdRoute: QuestChatQuestIdRoute,
