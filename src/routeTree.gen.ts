@@ -26,6 +26,7 @@ import { Route as MessagesIndexRouteImport } from './routes/messages.index'
 import { Route as UUserIdRouteImport } from './routes/u.$userId'
 import { Route as QuestChatQuestIdRouteImport } from './routes/quest-chat.$questId'
 import { Route as MessagesUserIdRouteImport } from './routes/messages.$userId'
+import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 
 const QuestsRoute = QuestsRouteImport.update({
   id: '/quests',
@@ -112,6 +113,11 @@ const MessagesUserIdRoute = MessagesUserIdRouteImport.update({
   path: '/messages/$userId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
+  id: '/checkout/return',
+  path: '/checkout/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
+  '/checkout/return': typeof CheckoutReturnRoute
   '/messages/$userId': typeof MessagesUserIdRoute
   '/quest-chat/$questId': typeof QuestChatQuestIdRoute
   '/u/$userId': typeof UUserIdRoute
@@ -146,6 +153,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
+  '/checkout/return': typeof CheckoutReturnRoute
   '/messages/$userId': typeof MessagesUserIdRoute
   '/quest-chat/$questId': typeof QuestChatQuestIdRoute
   '/u/$userId': typeof UUserIdRoute
@@ -166,6 +174,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
+  '/checkout/return': typeof CheckoutReturnRoute
   '/messages/$userId': typeof MessagesUserIdRoute
   '/quest-chat/$questId': typeof QuestChatQuestIdRoute
   '/u/$userId': typeof UUserIdRoute
@@ -187,6 +196,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/quan'
     | '/quests'
+    | '/checkout/return'
     | '/messages/$userId'
     | '/quest-chat/$questId'
     | '/u/$userId'
@@ -206,6 +216,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/quan'
     | '/quests'
+    | '/checkout/return'
     | '/messages/$userId'
     | '/quest-chat/$questId'
     | '/u/$userId'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/quan'
     | '/quests'
+    | '/checkout/return'
     | '/messages/$userId'
     | '/quest-chat/$questId'
     | '/u/$userId'
@@ -245,6 +257,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   QuanRoute: typeof QuanRoute
   QuestsRoute: typeof QuestsRoute
+  CheckoutReturnRoute: typeof CheckoutReturnRoute
   MessagesUserIdRoute: typeof MessagesUserIdRoute
   QuestChatQuestIdRoute: typeof QuestChatQuestIdRoute
   UUserIdRoute: typeof UUserIdRoute
@@ -372,6 +385,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MessagesUserIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/checkout/return': {
+      id: '/checkout/return'
+      path: '/checkout/return'
+      fullPath: '/checkout/return'
+      preLoaderRoute: typeof CheckoutReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -389,6 +409,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   QuanRoute: QuanRoute,
   QuestsRoute: QuestsRoute,
+  CheckoutReturnRoute: CheckoutReturnRoute,
   MessagesUserIdRoute: MessagesUserIdRoute,
   QuestChatQuestIdRoute: QuestChatQuestIdRoute,
   UUserIdRoute: UUserIdRoute,
@@ -397,13 +418,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

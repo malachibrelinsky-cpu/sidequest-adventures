@@ -66,13 +66,14 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       mode: isRecurring ? "subscription" : "payment",
       ui_mode: "embedded_page",
       return_url: data.returnUrl,
-      managed_payments: { enabled: true },
       ...(customerId && { customer: customerId }),
       ...(data.userId && {
         metadata: { userId: data.userId, managed_payments: "true" },
         ...(isRecurring && { subscription_data: { metadata: { userId: data.userId } } }),
       }),
-    });
+      // Enable Stripe end-to-end compliance handling (tax + fraud + disputes + support)
+      managed_payments: { enabled: true },
+    } as Stripe.Checkout.SessionCreateParams & { managed_payments: { enabled: boolean } });
 
     return session.client_secret;
   });
