@@ -71,6 +71,7 @@ export function SiteFooter() {
           <Link to="/about" className="hover:text-foreground">About</Link>
           <Link to="/how-it-works" className="hover:text-foreground">How it works</Link>
           <Link to="/feed" className="hover:text-foreground">Quests & Feed</Link>
+          <Link to="/privacy" className="hover:text-foreground">Privacy</Link>
         </div>
       </div>
     </footer>
