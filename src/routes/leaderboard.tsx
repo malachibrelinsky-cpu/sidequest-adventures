@@ -18,11 +18,7 @@ export const Route = createFileRoute("/leaderboard")({
   component: LeaderboardPage,
 });
 
-const DIFFICULTY_POINTS = { easy: 10, medium: 25, hard: 60, epic: 150 } as const;
-type Difficulty = keyof typeof DIFFICULTY_POINTS;
-
 type Profile = { id: string; display_name: string; avatar_url: string | null };
-type Completion = { id: string; user_id: string; title: string; difficulty: Difficulty; points: number; created_at: string };
 type Leaderboard = { id: string; name: string; invite_code: string; owner_id: string };
 
 function LeaderboardPage() {
@@ -45,7 +41,10 @@ function LeaderboardPage() {
             <h1 className="text-4xl md:text-5xl font-bold mb-2">Earn points. Outpace your crew.</h1>
             <p className="text-muted-foreground">Harder quests = more points. Keep your streak alive for a multiplier.</p>
           </div>
-          <LogCompletion onLogged={() => window.dispatchEvent(new Event("completions:refresh"))} userId={user.id} />
+          <div className="bento-card p-4 max-w-sm text-sm text-muted-foreground">
+            <p className="font-semibold text-foreground mb-1 inline-flex items-center gap-2"><Sparkles className="size-4 text-primary" /> Auto-logged</p>
+            Points are awarded automatically when the quest leader marks an invite as complete and Quan approves the evidence.
+          </div>
         </div>
 
         <StreakBanner userId={user.id} />
@@ -87,61 +86,6 @@ function PremiumLock() {
   );
 }
 
-function LogCompletion({ onLogged, userId }: { onLogged: () => void; userId: string }) {
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [difficulty, setDifficulty] = useState<Difficulty>("medium");
-  const [saving, setSaving] = useState(false);
-
-  const submit = async () => {
-    if (!title.trim()) { toast.error("Add a quest title"); return; }
-    setSaving(true);
-    const base = DIFFICULTY_POINTS[difficulty];
-    // Look up current streak to apply multiplier.
-    const { data: prior } = await supabase
-      .from("quest_completions")
-      .select("created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(50);
-    const streak = computeStreak((prior ?? []) as CompletionRow[]);
-    // After this insert, streak count grows by 1 (or starts at 1 if dead).
-    const newStreakCount = streak.alive ? streak.count + 1 : 1;
-    const mult = streakMultiplier(newStreakCount);
-    const points = Math.round(base * mult);
-    const { error } = await supabase.from("quest_completions").insert({ user_id: userId, title: title.trim().slice(0, 120), difficulty, points });
-    setSaving(false);
-    if (error) { toast.error(error.message); return; }
-    const bonus = points - base;
-    toast.success(bonus > 0 ? `+${points} points (+${bonus} streak bonus 🔥)` : `+${points} points!`);
-    setTitle(""); setDifficulty("medium"); setOpen(false);
-    onLogged();
-  };
-
-  if (!open) return (
-    <button onClick={() => setOpen(true)} className="rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-5 py-2.5 text-sm font-semibold inline-flex items-center gap-2 hover:opacity-90">
-      <Plus className="size-4" /> Log a completion
-    </button>
-  );
-
-  return (
-    <div className="bento-card p-5 w-full max-w-md">
-      <h3 className="font-bold mb-3">Log a completed quest</h3>
-      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Sunset Bridge Walk" maxLength={120} className="w-full rounded-lg bg-input/40 border border-border px-3 py-2 text-sm mb-3 outline-none focus:border-primary" />
-      <div className="grid grid-cols-4 gap-2 mb-4">
-        {(Object.keys(DIFFICULTY_POINTS) as Difficulty[]).map((d) => (
-          <button key={d} onClick={() => setDifficulty(d)} className={`rounded-lg border px-2 py-2 text-xs font-semibold capitalize transition ${difficulty === d ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50"}`}>
-            {d}<br /><span className="text-[10px] opacity-70">+{DIFFICULTY_POINTS[d]}</span>
-          </button>
-        ))}
-      </div>
-      <div className="flex gap-2">
-        <button onClick={submit} disabled={saving} className="flex-1 rounded-full bg-primary text-primary-foreground py-2 text-sm font-semibold disabled:opacity-50">{saving ? "Saving…" : "Save"}</button>
-        <button onClick={() => setOpen(false)} className="rounded-full border border-border px-4 py-2 text-sm">Cancel</button>
-      </div>
-    </div>
-  );
-}
 
 type RankRow = { profile: Profile; total: number; count: number; comps: CompletionRow[] };
 

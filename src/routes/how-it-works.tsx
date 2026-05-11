@@ -14,9 +14,11 @@ export const Route = createFileRoute("/how-it-works")({
 });
 
 const STEPS = [
-  { n: "01", title: "Tell us your vibe", body: "Two minutes. Pick interests, energy level, and whether you're into mornings or moonlight." },
-  { n: "02", title: "Pick a quest, or get matched", body: "Browse the board or let our algorithm slot you into something delightfully unexpected." },
-  { n: "03", title: "Show up. Story unfolds.", body: "Meet your tiny crew at the spot. Three hours later, you've got a new friend and a great anecdote." },
+  { n: "01", title: "Set your vibe", body: "Two minutes. Pick interests, energy level, and your city — Quan, our AI guide, uses this to surface quests that fit you." },
+  { n: "02", title: "Browse the feed or post a sidequest", body: "Scroll the feed for photo posts and quest invites, or post your own sidequest with the time, location, points, and how many people you want along." },
+  { n: "03", title: "Tap 'Accept Quest' to join the crew", body: "Accepting an invite drops you into a private group chat with everyone else who joined. Coordinate, hype each other up, show up." },
+  { n: "04", title: "Quest leader marks it complete", body: "Whoever posted the invite uploads photo or video evidence with the crew. Quan screens it to confirm everyone showed up and actually did the thing." },
+  { n: "05", title: "Points auto-awarded to everyone", body: "Once Quan approves, every participant — including the leader — is automatically awarded the quest's points. Keep your daily streak for a multiplier and climb the worldwide or private-league leaderboard." },
 ];
 
 function How() {
