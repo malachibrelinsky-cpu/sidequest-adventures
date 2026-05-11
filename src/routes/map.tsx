@@ -247,7 +247,7 @@ function LocationControls({ onGPS, onCity, saving }: { onGPS: () => void; onCity
   );
 }
 
-function LeafletMap({ me, members, onSelect }: { me: Member | null; members: Member[]; onSelect: (m: Member) => void }) {
+function LeafletMap({ me, members, quests, onSelect, onSelectQuest }: { me: Member | null; members: Member[]; quests: Quest[]; onSelect: (m: Member) => void; onSelectQuest: (q: Quest) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const layerRef = useRef<any>(null);
@@ -289,6 +289,11 @@ function LeafletMap({ me, members, onSelect }: { me: Member | null; members: Mem
         return L.divIcon({ html, className: "", iconSize: [42, 42], iconAnchor: [21, 21] });
       };
 
+      const questMarker = (points: number | null) => {
+        const html = `<div style="position:relative;width:44px;height:54px;filter:drop-shadow(0 2px 8px rgba(255,180,60,.6))"><div style="position:absolute;top:0;left:0;width:44px;height:44px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:linear-gradient(135deg,#fbbf24,#f97316);border:2px solid #0d1b2a"></div><div style="position:absolute;top:8px;left:8px;width:28px;height:28px;border-radius:9999px;background:#0d1b2a;display:grid;place-items:center;color:#fbbf24;font-weight:800;font-size:10px">${points ?? "★"}</div></div>`;
+        return L.divIcon({ html, className: "", iconSize: [44, 54], iconAnchor: [22, 50] });
+      };
+
       if (me?.latitude != null && me.longitude != null) {
         L.marker([me.latitude, me.longitude], { icon: mintMarker("You", true, null) })
           .bindTooltip("You", { direction: "top" })
@@ -300,13 +305,19 @@ function LeafletMap({ me, members, onSelect }: { me: Member | null; members: Mem
           .on("click", () => onSelect(m));
         marker.addTo(layerRef.current);
       });
+      quests.forEach((q) => {
+        const marker = L.marker([q.latitude, q.longitude], { icon: questMarker(q.points) })
+          .bindTooltip(q.caption || "Sidequest", { direction: "top" })
+          .on("click", () => onSelectQuest(q));
+        marker.addTo(layerRef.current);
+      });
 
       // Recenter if we just got a location
       if (me?.latitude != null && me.longitude != null && mapRef.current.getZoom() < 5) {
         mapRef.current.setView([me.latitude, me.longitude], 11);
       }
     })();
-  }, [ready, me, members, onSelect]);
+  }, [ready, me, members, quests, onSelect, onSelectQuest]);
 
   return (
     <>
