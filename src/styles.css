@@ -109,10 +109,7 @@
     background-repeat: no-repeat;
     background-position: center;
     background-size: min(85vmin, 900px) min(85vmin, 900px);
-    opacity: var(--compass-opacity, 0.35);
-    mix-blend-mode: soft-light;
-    -webkit-mask-image: radial-gradient(circle at center, black 35%, transparent 70%);
-            mask-image: radial-gradient(circle at center, black 35%, transparent 70%);
+    opacity: var(--compass-opacity, 0.85);
   }
   body > * {
     position: relative;
