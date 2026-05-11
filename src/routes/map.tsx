@@ -48,8 +48,11 @@ function MapPage() {
 
   const load = async () => {
     if (!user) return;
-    const { data } = await supabase.from("profiles").select("id, display_name, avatar_url, city, bio, latitude, longitude, map_color");
-    const list = (data ?? []) as Member[];
+    const { data } = await supabase.from("profiles").select("id, display_name, avatar_url, city, bio, lat_approx, lon_approx, map_color");
+    const list = ((data ?? []) as Array<Omit<Member, "latitude" | "longitude"> & { lat_approx: number | null; lon_approx: number | null }>).map((m) => ({
+      id: m.id, display_name: m.display_name, avatar_url: m.avatar_url, city: m.city, bio: m.bio,
+      map_color: m.map_color, latitude: m.lat_approx, longitude: m.lon_approx,
+    })) as Member[];
     setMembers(list.filter((m) => m.id !== user.id && m.latitude != null && m.longitude != null));
     setMe(list.find((m) => m.id === user.id) ?? null);
 
@@ -295,6 +298,7 @@ function LeafletMap({ me, members, quests, onSelect, onSelectQuest }: { me: Memb
         const dLon = (dMeters * Math.sin(a)) / (111320 * Math.cos((lat * Math.PI) / 180));
         return [dLat, dLon] as const;
       };
+      const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
       const addUserCircle = (lat: number, lon: number, label: string, isMe: boolean, color: string, seed: string, onClick?: () => void) => {
         const [dLat, dLon] = offsetFor(seed, lat);
         const circle = L.circle([lat + dLat, lon + dLon], {
@@ -318,11 +322,11 @@ function LeafletMap({ me, members, quests, onSelect, onSelectQuest }: { me: Memb
         addUserCircle(me.latitude, me.longitude, "You (approx. area)", true, me.map_color || DEFAULT_COLOR, me.id);
       }
       members.forEach((m) => {
-        addUserCircle(m.latitude!, m.longitude!, `${m.display_name} · approx. area`, false, m.map_color || DEFAULT_COLOR, m.id, () => onSelect(m));
+        addUserCircle(m.latitude!, m.longitude!, `${escapeHtml(m.display_name)} · approx. area`, false, m.map_color || DEFAULT_COLOR, m.id, () => onSelect(m));
       });
       quests.forEach((q) => {
         const marker = L.marker([q.latitude, q.longitude], { icon: questMarker(q.points) })
-          .bindTooltip(q.caption || "Sidequest", { direction: "top" })
+          .bindTooltip(escapeHtml(q.caption || "Sidequest"), { direction: "top" })
           .on("click", () => onSelectQuest(q));
         marker.addTo(layerRef.current);
       });

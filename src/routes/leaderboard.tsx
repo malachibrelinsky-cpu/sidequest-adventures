@@ -335,15 +335,8 @@ function StreakBanner({ userId }: { userId: string }) {
   const revive = async () => {
     if (!canRevive || !comps.length) return;
     setReviving(true);
-    // Insert a placeholder completion 71h after the most recent one so the streak chain stays intact.
-    const lastTs = Math.max(...comps.map((c) => new Date(c.created_at).getTime()));
-    const bridgeAt = new Date(lastTs + (STREAK_WINDOW_MS - 60 * 60 * 1000)).toISOString();
-    const { error: insErr } = await supabase.from("quest_completions").insert({
-      user_id: userId, title: "🛟 Streak revive", difficulty: "easy", points: 0, created_at: bridgeAt,
-    });
-    if (insErr) { setReviving(false); toast.error(insErr.message); return; }
-    const { error: subErr } = await supabase.from("subscribers").update({ last_streak_revive_at: new Date().toISOString() }).eq("user_id", userId);
-    if (subErr) { setReviving(false); toast.error(subErr.message); return; }
+    const { error: rpcErr } = await supabase.rpc("revive_streak");
+    if (rpcErr) { setReviving(false); toast.error(rpcErr.message); return; }
     toast.success("Streak revived! 🛟🔥");
     setReviving(false);
     await loadAll();
