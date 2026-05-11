@@ -25,6 +25,14 @@ type Member = {
   latitude: number | null; longitude: number | null;
 };
 
+type Quest = {
+  id: string; caption: string | null; location: string | null;
+  difficulty: string | null; points: number | null;
+  participants_needed: number | null; quest_time: string | null;
+  latitude: number; longitude: number;
+  profiles: { display_name: string; avatar_url: string | null } | null;
+};
+
 function MapPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -32,6 +40,8 @@ function MapPage() {
   const [me, setMe] = useState<Member | null>(null);
   const [savingLoc, setSavingLoc] = useState(false);
   const [selected, setSelected] = useState<Member | null>(null);
+  const [quests, setQuests] = useState<Quest[]>([]);
+  const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
 
@@ -41,6 +51,15 @@ function MapPage() {
     const list = (data ?? []) as Member[];
     setMembers(list.filter((m) => m.id !== user.id && m.latitude != null && m.longitude != null));
     setMe(list.find((m) => m.id === user.id) ?? null);
+
+    const { data: qData } = await supabase
+      .from("posts")
+      .select("id, caption, location, difficulty, points, participants_needed, quest_time, latitude, longitude, profiles!posts_user_id_fkey(display_name, avatar_url)")
+      .not("difficulty", "is", null)
+      .not("latitude", "is", null)
+      .is("completed_at", null)
+      .order("created_at", { ascending: false });
+    setQuests((qData ?? []) as unknown as Quest[]);
   };
   useEffect(() => { if (user) load(); }, [user]);
 
