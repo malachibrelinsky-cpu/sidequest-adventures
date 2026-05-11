@@ -145,21 +145,27 @@ function FeedPage() {
     <div className="min-h-screen">
       <SiteHeader />
       <main className="mx-auto max-w-2xl px-4 py-10">
-        <div className="mb-6">
-          <h1 className="text-4xl font-bold mb-2">Quests & Feed</h1>
-          <p className="text-muted-foreground">Joinable sidequests and photos from adventures around you.</p>
+        <div className="mb-8 relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/15 via-accent/10 to-transparent p-6">
+          <div className="absolute -top-12 -right-12 size-40 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
+          <div className="relative">
+            <p className="text-[11px] uppercase tracking-[0.25em] text-primary font-bold mb-2">Your feed</p>
+            <h1 className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Quests & Adventures</h1>
+            <p className="text-muted-foreground text-sm">Joinable sidequests and photos from adventurers around you.</p>
+          </div>
         </div>
 
         <ComposePost onPosted={load} />
 
-        <div className="flex gap-1 border-b border-border mt-8 mb-4">
-          {(["all", "quests", "updates"] as const).map((t) => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`px-4 py-2.5 text-sm font-semibold capitalize border-b-2 -mb-px transition ${tab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-              {t === "quests" ? "🎯 Sidequests" : t === "updates" ? "📸 Updates" : "All"}
-              <span className="ml-1.5 text-[10px] opacity-70">{counts[t]}</span>
-            </button>
-          ))}
+        <div className="sticky top-2 z-10 mt-8 mb-5">
+          <div className="flex gap-1 p-1 rounded-full bg-card/80 backdrop-blur border border-border shadow-sm">
+            {(["all", "quests", "updates"] as const).map((t) => (
+              <button key={t} onClick={() => setTab(t)}
+                className={`flex-1 px-4 py-2 rounded-full text-sm font-semibold capitalize transition inline-flex items-center justify-center gap-1.5 ${tab === t ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_0_20px_-5px_var(--mint,theme(colors.primary.DEFAULT))]" : "text-muted-foreground hover:text-foreground"}`}>
+                <span>{t === "quests" ? "🎯 Sidequests" : t === "updates" ? "📸 Updates" : "✨ All"}</span>
+                <span className={`text-[10px] rounded-full px-1.5 py-0.5 ${tab === t ? "bg-black/20" : "bg-muted/50"}`}>{counts[t]}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {fetching ? (
