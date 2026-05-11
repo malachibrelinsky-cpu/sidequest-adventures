@@ -13,6 +13,7 @@ import { Route as QuestsRouteImport } from './routes/quests'
 import { Route as QuanRouteImport } from './routes/quan'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as ModerationRouteImport } from './routes/moderation'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
@@ -21,6 +22,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MessagesIndexRouteImport } from './routes/messages.index'
+import { Route as UUserIdRouteImport } from './routes/u.$userId'
 import { Route as QuestChatQuestIdRouteImport } from './routes/quest-chat.$questId'
 import { Route as MessagesUserIdRouteImport } from './routes/messages.$userId'
 
@@ -42,6 +44,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ModerationRoute = ModerationRouteImport.update({
+  id: '/moderation',
+  path: '/moderation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MapRoute = MapRouteImport.update({
@@ -84,6 +91,11 @@ const MessagesIndexRoute = MessagesIndexRouteImport.update({
   path: '/messages/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UUserIdRoute = UUserIdRouteImport.update({
+  id: '/u/$userId',
+  path: '/u/$userId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const QuestChatQuestIdRoute = QuestChatQuestIdRouteImport.update({
   id: '/quest-chat/$questId',
   path: '/quest-chat/$questId',
@@ -103,12 +115,14 @@ export interface FileRoutesByFullPath {
   '/how-it-works': typeof HowItWorksRoute
   '/leaderboard': typeof LeaderboardRoute
   '/map': typeof MapRoute
+  '/moderation': typeof ModerationRoute
   '/pricing': typeof PricingRoute
   '/profile': typeof ProfileRoute
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
   '/messages/$userId': typeof MessagesUserIdRoute
   '/quest-chat/$questId': typeof QuestChatQuestIdRoute
+  '/u/$userId': typeof UUserIdRoute
   '/messages/': typeof MessagesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -119,12 +133,14 @@ export interface FileRoutesByTo {
   '/how-it-works': typeof HowItWorksRoute
   '/leaderboard': typeof LeaderboardRoute
   '/map': typeof MapRoute
+  '/moderation': typeof ModerationRoute
   '/pricing': typeof PricingRoute
   '/profile': typeof ProfileRoute
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
   '/messages/$userId': typeof MessagesUserIdRoute
   '/quest-chat/$questId': typeof QuestChatQuestIdRoute
+  '/u/$userId': typeof UUserIdRoute
   '/messages': typeof MessagesIndexRoute
 }
 export interface FileRoutesById {
@@ -136,12 +152,14 @@ export interface FileRoutesById {
   '/how-it-works': typeof HowItWorksRoute
   '/leaderboard': typeof LeaderboardRoute
   '/map': typeof MapRoute
+  '/moderation': typeof ModerationRoute
   '/pricing': typeof PricingRoute
   '/profile': typeof ProfileRoute
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
   '/messages/$userId': typeof MessagesUserIdRoute
   '/quest-chat/$questId': typeof QuestChatQuestIdRoute
+  '/u/$userId': typeof UUserIdRoute
   '/messages/': typeof MessagesIndexRoute
 }
 export interface FileRouteTypes {
@@ -154,12 +172,14 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/leaderboard'
     | '/map'
+    | '/moderation'
     | '/pricing'
     | '/profile'
     | '/quan'
     | '/quests'
     | '/messages/$userId'
     | '/quest-chat/$questId'
+    | '/u/$userId'
     | '/messages/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -170,12 +190,14 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/leaderboard'
     | '/map'
+    | '/moderation'
     | '/pricing'
     | '/profile'
     | '/quan'
     | '/quests'
     | '/messages/$userId'
     | '/quest-chat/$questId'
+    | '/u/$userId'
     | '/messages'
   id:
     | '__root__'
@@ -186,12 +208,14 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/leaderboard'
     | '/map'
+    | '/moderation'
     | '/pricing'
     | '/profile'
     | '/quan'
     | '/quests'
     | '/messages/$userId'
     | '/quest-chat/$questId'
+    | '/u/$userId'
     | '/messages/'
   fileRoutesById: FileRoutesById
 }
@@ -203,12 +227,14 @@ export interface RootRouteChildren {
   HowItWorksRoute: typeof HowItWorksRoute
   LeaderboardRoute: typeof LeaderboardRoute
   MapRoute: typeof MapRoute
+  ModerationRoute: typeof ModerationRoute
   PricingRoute: typeof PricingRoute
   ProfileRoute: typeof ProfileRoute
   QuanRoute: typeof QuanRoute
   QuestsRoute: typeof QuestsRoute
   MessagesUserIdRoute: typeof MessagesUserIdRoute
   QuestChatQuestIdRoute: typeof QuestChatQuestIdRoute
+  UUserIdRoute: typeof UUserIdRoute
   MessagesIndexRoute: typeof MessagesIndexRoute
 }
 
@@ -240,6 +266,13 @@ declare module '@tanstack/react-router' {
       path: '/pricing'
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/moderation': {
+      id: '/moderation'
+      path: '/moderation'
+      fullPath: '/moderation'
+      preLoaderRoute: typeof ModerationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/map': {
@@ -298,6 +331,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MessagesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/u/$userId': {
+      id: '/u/$userId'
+      path: '/u/$userId'
+      fullPath: '/u/$userId'
+      preLoaderRoute: typeof UUserIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/quest-chat/$questId': {
       id: '/quest-chat/$questId'
       path: '/quest-chat/$questId'
@@ -323,12 +363,14 @@ const rootRouteChildren: RootRouteChildren = {
   HowItWorksRoute: HowItWorksRoute,
   LeaderboardRoute: LeaderboardRoute,
   MapRoute: MapRoute,
+  ModerationRoute: ModerationRoute,
   PricingRoute: PricingRoute,
   ProfileRoute: ProfileRoute,
   QuanRoute: QuanRoute,
   QuestsRoute: QuestsRoute,
   MessagesUserIdRoute: MessagesUserIdRoute,
   QuestChatQuestIdRoute: QuestChatQuestIdRoute,
+  UUserIdRoute: UUserIdRoute,
   MessagesIndexRoute: MessagesIndexRoute,
 }
 export const routeTree = rootRouteImport
