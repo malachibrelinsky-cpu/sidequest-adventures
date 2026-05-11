@@ -45,7 +45,10 @@ function LeaderboardPage() {
             <h1 className="text-4xl md:text-5xl font-bold mb-2">Earn points. Outpace your crew.</h1>
             <p className="text-muted-foreground">Harder quests = more points. Keep your streak alive for a multiplier.</p>
           </div>
-          <LogCompletion onLogged={() => window.dispatchEvent(new Event("completions:refresh"))} userId={user.id} />
+          <div className="bento-card p-4 max-w-sm text-sm text-muted-foreground">
+            <p className="font-semibold text-foreground mb-1 inline-flex items-center gap-2"><Sparkles className="size-4 text-primary" /> Auto-logged</p>
+            Points are awarded automatically when the quest leader marks an invite as complete and Quan approves the evidence.
+          </div>
         </div>
 
         <StreakBanner userId={user.id} />
