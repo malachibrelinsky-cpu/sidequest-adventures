@@ -25,6 +25,7 @@ function ProfilePage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ display_name: "", bio: "", city: "", interests: "" });
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [mapColor, setMapColor] = useState<string>("#2dd4a8");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
@@ -40,6 +41,7 @@ function ProfilePage() {
           interests: (data.interests ?? []).join(", "),
         });
         setAvatarUrl(data.avatar_url);
+        if ((data as { map_color?: string }).map_color) setMapColor((data as { map_color: string }).map_color);
       }
     });
   }, [user]);
@@ -48,12 +50,14 @@ function ProfilePage() {
     if (!user) return;
     const parsed = schema.safeParse(form);
     if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
+    if (!/^#[0-9a-f]{6}$/i.test(mapColor)) { toast.error("Pick a valid map color"); return; }
     setSaving(true);
     const { error } = await supabase.from("profiles").update({
       display_name: parsed.data.display_name,
       bio: parsed.data.bio || null,
       city: parsed.data.city || null,
       interests: parsed.data.interests ? parsed.data.interests.split(",").map(s => s.trim()).filter(Boolean) : [],
+      map_color: mapColor.toLowerCase(),
     }).eq("id", user.id);
     setSaving(false);
     if (error) toast.error(error.message);
