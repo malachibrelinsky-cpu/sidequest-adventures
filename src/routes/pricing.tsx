@@ -35,8 +35,27 @@ const premium = [
 ];
 
 function PricingPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { openCheckout, closeCheckout, isOpen, checkoutElement } = useStripeCheckout();
+
+  const handleGoPremium = () => {
+    if (!user) {
+      navigate({ to: "/auth" });
+      return;
+    }
+    openCheckout({
+      priceId: "premium_monthly",
+      quantity: 1,
+      customerEmail: user.email ?? undefined,
+      userId: user.id,
+      returnUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+    });
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
+      <PaymentTestModeBanner />
       <SiteHeader />
       <main className="mx-auto w-full max-w-6xl px-6 py-16 flex-1">
         <div className="text-center mb-14">
