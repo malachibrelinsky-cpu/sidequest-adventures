@@ -27,9 +27,30 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const post_id: string | undefined = body?.post_id;
-    const evidence_urls: string[] = Array.isArray(body?.evidence_urls) ? body.evidence_urls : [];
+    const rawEvidenceUrls: string[] = Array.isArray(body?.evidence_urls) ? body.evidence_urls : [];
     if (!post_id) return json({ error: "post_id required" }, 400);
-    if (evidence_urls.length === 0) return json({ error: "Add at least one photo or video" }, 400);
+    if (rawEvidenceUrls.length === 0) return json({ error: "Add at least one photo or video" }, 400);
+    if (rawEvidenceUrls.length > 12) return json({ error: "Too many files (max 12)" }, 400);
+
+    // Only accept URLs that point to this user's own folder in our public storage bucket.
+    // This prevents users from passing arbitrary external URLs (or other users' uploads)
+    // to game AI screening or persist third-party content in posts.evidence_urls.
+    const allowedPrefix = `${SUPABASE_URL.replace(/\/+$/, "")}/storage/v1/object/public/post-images/${user.id}/`;
+    const evidence_urls: string[] = [];
+    for (const u of rawEvidenceUrls) {
+      if (typeof u !== "string" || u.length > 1024) {
+        return json({ error: "Invalid evidence URL" }, 400);
+      }
+      let parsed: URL;
+      try { parsed = new URL(u); } catch { return json({ error: "Invalid evidence URL" }, 400); }
+      if (parsed.protocol !== "https:") return json({ error: "Evidence URL must be https" }, 400);
+      // Strip query/hash before prefix-check so cache-busters can't bypass it.
+      const normalized = `${parsed.origin}${parsed.pathname}`;
+      if (!normalized.startsWith(allowedPrefix)) {
+        return json({ error: "Evidence URLs must point to your own uploads in app storage" }, 400);
+      }
+      evidence_urls.push(normalized);
+    }
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
