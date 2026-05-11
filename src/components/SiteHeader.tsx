@@ -36,6 +36,7 @@ export function SiteHeader() {
           {user && <Link to="/quan" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition inline-flex items-center gap-1">Quan <span className="text-[10px] uppercase tracking-wider rounded bg-primary/20 text-primary px-1.5 py-0.5 font-bold">AI</span></Link>}
           {!isPremium && <Link to="/pricing" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">Pricing</Link>}
           <Link to="/how-it-works" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition">How it works</Link>
+          {isMod && <Link to="/moderation" activeProps={{ className: "text-primary" }} className="hover:text-foreground transition inline-flex items-center gap-1"><ShieldCheck className="size-3.5" /> Mod</Link>}
         </nav>
         {user ? (
           <div className="flex items-center gap-3">
