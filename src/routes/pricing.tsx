@@ -118,14 +118,33 @@ function PricingPage() {
                 </li>
               ))}
             </ul>
-            <Link
-              to="/auth"
+            <button
+              type="button"
+              onClick={handleGoPremium}
               className="rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-5 py-3 text-sm font-semibold text-center hover:opacity-90 transition shadow-[0_0_30px_-5px_var(--mint)]"
             >
               Go Premium
-            </Link>
+            </button>
           </div>
         </div>
+
+        {isOpen && (
+          <div className="fixed inset-0 z-[100] bg-background/90 backdrop-blur-md overflow-y-auto">
+            <div className="mx-auto max-w-3xl px-4 py-8">
+              <div className="flex justify-end mb-3">
+                <button
+                  onClick={closeCheckout}
+                  className="rounded-full border border-border bg-card/80 px-4 py-2 text-sm font-medium hover:border-primary transition"
+                >
+                  Close
+                </button>
+              </div>
+              <div className="rounded-2xl bg-card p-2">
+                {checkoutElement}
+              </div>
+            </div>
+          </div>
+        )}
 
         <p className="text-center text-xs text-muted-foreground mt-10">
           Cancel anytime. Prices in USD. Taxes calculated at checkout.
