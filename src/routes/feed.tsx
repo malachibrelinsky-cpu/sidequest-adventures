@@ -218,7 +218,7 @@ export function FeedPage() {
           </div>
         </div>
 
-        <ComposePost onPosted={load} />
+        
 
         {isQuestsRoute ? (
           <div className="mt-8 mb-5 space-y-3">
