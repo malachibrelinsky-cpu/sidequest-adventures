@@ -112,6 +112,26 @@ function ProfilePage() {
             </div>
           ))}
 
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Map circle color</label>
+            <div className="flex items-center gap-3">
+              <input type="color" value={mapColor} onChange={(e) => setMapColor(e.target.value)}
+                className="size-12 rounded-xl bg-input/40 border border-border cursor-pointer" />
+              <div className="flex flex-wrap gap-2">
+                {["#2dd4a8", "#3b82f6", "#a855f7", "#ec4899", "#f97316", "#eab308", "#ef4444", "#ffffff"].map((c) => (
+                  <button key={c} type="button" onClick={() => setMapColor(c)}
+                    aria-label={`Pick ${c}`}
+                    className={`size-8 rounded-full border-2 transition ${mapColor.toLowerCase() === c ? "border-foreground scale-110" : "border-border"}`}
+                    style={{ background: c }} />
+                ))}
+              </div>
+              <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Preview</span>
+                <span className="size-8 rounded-full" style={{ background: mapColor, opacity: 0.4, border: `2px solid ${mapColor}` }} />
+              </div>
+            </div>
+          </div>
+
           <button onClick={save} disabled={saving}
             className="w-full rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground py-3 font-semibold disabled:opacity-50 hover:opacity-90 transition">
             {saving ? "Saving…" : "Save profile"}
