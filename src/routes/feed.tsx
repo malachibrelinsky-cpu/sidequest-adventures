@@ -404,7 +404,7 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
   );
 }
 
-function PostCard({ post, onChange, currentUserId }: { post: Post; onChange: () => void; currentUserId: string }) {
+function PostCard({ post, onChange, currentUserId, distanceKm }: { post: Post; onChange: () => void; currentUserId: string; distanceKm?: number | null }) {
   const navigate = useNavigate();
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
