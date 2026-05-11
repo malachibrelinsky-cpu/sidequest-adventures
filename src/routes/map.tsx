@@ -283,15 +283,15 @@ function LeafletMap({ me, members, quests, onSelect, onSelectQuest }: { me: Memb
       layerRef.current.clearLayers();
 
       const FIVE_MILES_M = 8046.72;
-      const addUserCircle = (lat: number, lon: number, label: string, isMe: boolean, onClick?: () => void) => {
-        const color = isMe ? "#73ffb8" : "#2dd4a8";
+      const DEFAULT_COLOR = "#2dd4a8";
+      const addUserCircle = (lat: number, lon: number, label: string, isMe: boolean, color: string, onClick?: () => void) => {
         const circle = L.circle([lat, lon], {
           radius: FIVE_MILES_M,
           color,
           weight: 2,
-          opacity: 0.7,
+          opacity: 0.75,
           fillColor: color,
-          fillOpacity: isMe ? 0.18 : 0.12,
+          fillOpacity: isMe ? 0.22 : 0.14,
         }).bindTooltip(label, { direction: "top", sticky: true });
         if (onClick) circle.on("click", onClick);
         circle.addTo(layerRef.current);
@@ -303,10 +303,10 @@ function LeafletMap({ me, members, quests, onSelect, onSelectQuest }: { me: Memb
       };
 
       if (me?.latitude != null && me.longitude != null) {
-        addUserCircle(me.latitude, me.longitude, "You (approx. 5-mi radius)", true);
+        addUserCircle(me.latitude, me.longitude, "You (approx. 5-mi radius)", true, me.map_color || DEFAULT_COLOR);
       }
       members.forEach((m) => {
-        addUserCircle(m.latitude!, m.longitude!, `${m.display_name} · ~5 mi area`, false, () => onSelect(m));
+        addUserCircle(m.latitude!, m.longitude!, `${m.display_name} · ~5 mi area`, false, m.map_color || DEFAULT_COLOR, () => onSelect(m));
       });
       quests.forEach((q) => {
         const marker = L.marker([q.latitude, q.longitude], { icon: questMarker(q.points) })
