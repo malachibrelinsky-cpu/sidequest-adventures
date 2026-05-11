@@ -225,7 +225,9 @@ export type Database = {
           display_name: string
           id: string
           interests: string[] | null
+          lat_approx: number | null
           latitude: number | null
+          lon_approx: number | null
           longitude: number | null
           map_color: string
           updated_at: string
@@ -238,7 +240,9 @@ export type Database = {
           display_name: string
           id: string
           interests?: string[] | null
+          lat_approx?: number | null
           latitude?: number | null
+          lon_approx?: number | null
           longitude?: number | null
           map_color?: string
           updated_at?: string
@@ -251,7 +255,9 @@ export type Database = {
           display_name?: string
           id?: string
           interests?: string[] | null
+          lat_approx?: number | null
           latitude?: number | null
+          lon_approx?: number | null
           longitude?: number | null
           map_color?: string
           updated_at?: string
@@ -496,6 +502,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_my_location: {
+        Args: never
+        Returns: {
+          latitude: number
+          longitude: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -511,6 +524,7 @@ export type Database = {
         Args: { _post: string; _user: string }
         Returns: boolean
       }
+      revive_streak: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
