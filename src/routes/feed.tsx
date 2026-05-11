@@ -173,7 +173,7 @@ function FeedPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {filtered.map((p) => <PostCard key={p.id} post={p} onChange={load} currentUserId={user.id} />)}
+            {filtered.map(({ post: p, dist }) => <PostCard key={p.id} post={p} onChange={load} currentUserId={user.id} distanceKm={dist} />)}
           </div>
         )}
       </main>
