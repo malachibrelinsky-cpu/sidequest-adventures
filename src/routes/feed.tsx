@@ -598,12 +598,12 @@ function PostCard({ post, onChange, currentUserId, distanceKm }: { post: Post; o
       ) : (
         post.caption && <p className="px-4 pt-4 text-sm">{post.caption}</p>
       )}
-      <div className="px-4 py-3 flex items-center gap-4 text-sm text-muted-foreground">
-        <button className="flex items-center gap-1.5 hover:text-primary transition">
-          <Heart className="size-5" />
+      <div className="px-4 py-3 mt-1 flex items-center gap-2 text-sm border-t border-border/60">
+        <button className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-muted/40 hover:bg-rose-500/15 hover:text-rose-400 text-muted-foreground font-medium transition">
+          <Heart className="size-4" /> Like
         </button>
-        <button onClick={() => setShowComments((v) => !v)} className="flex items-center gap-1.5 hover:text-primary transition">
-          <MessageCircle className="size-5" /> {post.comments.length}
+        <button onClick={() => setShowComments((v) => !v)} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-medium transition ${showComments ? "bg-primary/15 text-primary" : "bg-muted/40 hover:bg-primary/15 hover:text-primary text-muted-foreground"}`}>
+          <MessageCircle className="size-4" /> {post.comments.length} {post.comments.length === 1 ? "comment" : "comments"}
         </button>
       </div>
       {showComments && (
