@@ -150,43 +150,39 @@ function FeedPage() {
         <div className="mb-8 relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/15 via-accent/10 to-transparent p-6">
           <div className="absolute -top-12 -right-12 size-40 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
           <div className="relative">
-            <p className="text-[11px] uppercase tracking-[0.25em] text-primary font-bold mb-2">{isQuestsRoute ? "Sidequest invites" : "Your feed"}</p>
-            <h1 className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">{isQuestsRoute ? "Post & browse invites" : "Quests & Adventures"}</h1>
-            <p className="text-muted-foreground text-sm">{isQuestsRoute ? "Create a sidequest others can join, or hop on one near you." : "Joinable sidequests and photos from adventurers around you."}</p>
+            <p className="text-[11px] uppercase tracking-[0.25em] text-primary font-bold mb-2">Your feed</p>
+            <h1 className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Quests & Adventures</h1>
+            <p className="text-muted-foreground text-sm">Joinable sidequests and photos from adventurers around you.</p>
           </div>
         </div>
 
-        <ComposePost onPosted={load} forceQuest={isQuestsRoute} />
+        <ComposePost onPosted={load} />
 
-        {!isQuestsRoute && (
-          <div className="sticky top-2 z-10 mt-8 mb-5">
-            <div className="flex gap-1 p-1 rounded-full bg-card/80 backdrop-blur border border-border shadow-sm">
-              {(["all", "quests", "updates"] as const).map((t) => (
-                <button key={t} onClick={() => setTab(t)}
-                  className={`flex-1 px-4 py-2 rounded-full text-sm font-semibold capitalize transition inline-flex items-center justify-center gap-1.5 ${tab === t ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_0_20px_-5px_var(--mint,theme(colors.primary.DEFAULT))]" : "text-muted-foreground hover:text-foreground"}`}>
-                  <span>{t === "quests" ? "🎯 Sidequests" : t === "updates" ? "📸 Updates" : "✨ All"}</span>
-                  <span className={`text-[10px] rounded-full px-1.5 py-0.5 ${tab === t ? "bg-black/20" : "bg-muted/50"}`}>{counts[t]}</span>
-                </button>
-              ))}
-            </div>
+        <div className="sticky top-2 z-10 mt-8 mb-5">
+          <div className="flex gap-1 p-1 rounded-full bg-card/80 backdrop-blur border border-border shadow-sm">
+            {(["all", "quests", "updates"] as const).map((t) => (
+              <button key={t} onClick={() => setTab(t)}
+                className={`flex-1 px-4 py-2 rounded-full text-sm font-semibold capitalize transition inline-flex items-center justify-center gap-1.5 ${tab === t ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_0_20px_-5px_var(--mint,theme(colors.primary.DEFAULT))]" : "text-muted-foreground hover:text-foreground"}`}>
+                <span>{t === "quests" ? "🎯 Sidequests" : t === "updates" ? "📸 Updates" : "✨ All"}</span>
+                <span className={`text-[10px] rounded-full px-1.5 py-0.5 ${tab === t ? "bg-black/20" : "bg-muted/50"}`}>{counts[t]}</span>
+              </button>
+            ))}
           </div>
-        )}
-        {isQuestsRoute && <div className="mt-8 mb-5 text-xs uppercase tracking-[0.2em] text-muted-foreground font-semibold">{questsList.length} open invite{questsList.length === 1 ? "" : "s"} near you</div>}
+        </div>
 
         {fetching ? (
           <p className="text-muted-foreground text-center py-12">Loading posts…</p>
-        ) : (isQuestsRoute ? questsList : filtered).length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="bento-card p-10 text-center mt-6">
             <p className="text-muted-foreground">
-              {isQuestsRoute ? "No open sidequest invites yet — post the first one above." :
-               tab === "quests" ? "No joinable sidequests yet — post one with the trophy toggle above." :
+              {tab === "quests" ? "No joinable sidequests yet — post one with the trophy toggle above." :
                tab === "updates" ? "No photo updates yet." :
                "No posts yet. Be the first to share a side quest."}
             </p>
           </div>
         ) : (
           <div className="space-y-6">
-            {(isQuestsRoute ? questsList : filtered).map(({ post: p, dist }) => <PostCard key={p.id} post={p} onChange={load} currentUserId={user.id} distanceKm={dist} />)}
+            {filtered.map(({ post: p, dist }) => <PostCard key={p.id} post={p} onChange={load} currentUserId={user.id} distanceKm={dist} />)}
           </div>
         )}
       </main>
@@ -195,13 +191,13 @@ function FeedPage() {
   );
 }
 
-function ComposePost({ onPosted, forceQuest = false }: { onPosted: () => void; forceQuest?: boolean }) {
+function ComposePost({ onPosted }: { onPosted: () => void }) {
   const { user } = useAuth();
   const [caption, setCaption] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [rotations, setRotations] = useState<number[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [isQuest, setIsQuest] = useState(forceQuest);
+  const [isQuest, setIsQuest] = useState(false);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [points, setPoints] = useState<string>("25");
   const [participantsNeeded, setParticipantsNeeded] = useState<string>("4");
@@ -288,7 +284,7 @@ function ComposePost({ onPosted, forceQuest = false }: { onPosted: () => void; f
         longitude: lon,
       });
       if (error) throw error;
-      setCaption(""); setFiles([]); setRotations([]); setIsQuest(forceQuest); setDifficulty("medium"); setPoints("25");
+      setCaption(""); setFiles([]); setRotations([]); setIsQuest(false); setDifficulty("medium"); setPoints("25");
       setParticipantsNeeded("4"); setQuestTime(""); setLocation("");
       if (fileRef.current) fileRef.current.value = "";
       toast.success("Posted!");
@@ -302,7 +298,7 @@ function ComposePost({ onPosted, forceQuest = false }: { onPosted: () => void; f
     <div className="bento-card p-5">
       <textarea
         value={caption} onChange={(e) => setCaption(e.target.value)} maxLength={500}
-        placeholder={forceQuest ? "Describe the sidequest invite — what, where, vibe…" : "What was the side quest tonight?"}
+        placeholder="What was the side quest tonight?"
         className="w-full bg-transparent resize-none outline-none placeholder:text-muted-foreground"
         rows={2}
       />
@@ -349,19 +345,12 @@ function ComposePost({ onPosted, forceQuest = false }: { onPosted: () => void; f
       )}
 
       <div className="mt-3 pt-3 border-t border-border">
-        {forceQuest ? (
-          <div className="flex items-center gap-2 text-sm">
-            <Trophy className="size-4 text-primary" />
-            <span className="font-semibold">Sidequest invite — others can join</span>
-          </div>
-        ) : (
-          <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-            <input type="checkbox" checked={isQuest} onChange={(e) => setIsQuest(e.target.checked)}
-              className="size-4 rounded border-border accent-primary" />
-            <Trophy className="size-4 text-primary" />
-            <span className="font-semibold">Post as a sidequest others can join</span>
-          </label>
-        )}
+        <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+          <input type="checkbox" checked={isQuest} onChange={(e) => setIsQuest(e.target.checked)}
+            className="size-4 rounded border-border accent-primary" />
+          <Trophy className="size-4 text-primary" />
+          <span className="font-semibold">Post as a sidequest others can join</span>
+        </label>
 
         {isQuest && (
           <div className="mt-3 space-y-3 rounded-xl bg-input/20 border border-border p-3">
