@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Route as FeedRoute } from "./feed";
+import { FeedPage } from "./feed";
 
 export const Route = createFileRoute("/quests")({
   head: () => ({
@@ -9,5 +9,5 @@ export const Route = createFileRoute("/quests")({
     ],
     links: [{ rel: "stylesheet", href: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" }],
   }),
-  component: FeedRoute.options.component,
+  component: FeedPage,
 });
