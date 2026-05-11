@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.screen-quest-completion]
 verify_jwt = true
+
+[functions.screen-user-report]
+verify_jwt = true
