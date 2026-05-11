@@ -186,6 +186,36 @@ export type Database = {
           },
         ]
       }
+      profile_ratings: {
+        Row: {
+          created_at: string
+          id: string
+          ratee_id: string
+          rater_id: string
+          review: string | null
+          stars: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ratee_id: string
+          rater_id: string
+          review?: string | null
+          stars: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ratee_id?: string
+          rater_id?: string
+          review?: string | null
+          stars?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -339,11 +369,114 @@ export type Database = {
         }
         Relationships: []
       }
+      user_moderation: {
+        Row: {
+          reason: string | null
+          status: string
+          until: string | null
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          reason?: string | null
+          status?: string
+          until?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          reason?: string | null
+          status?: string
+          until?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_reports: {
+        Row: {
+          ai_reasoning: string | null
+          ai_reviewed_at: string | null
+          ai_verdict: string | null
+          context: string | null
+          created_at: string
+          id: string
+          reason: string
+          reported_user_id: string
+          reporter_id: string
+          resolution: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          ai_reasoning?: string | null
+          ai_reviewed_at?: string | null
+          ai_verdict?: string | null
+          context?: string | null
+          created_at?: string
+          id?: string
+          reason: string
+          reported_user_id: string
+          reporter_id: string
+          resolution?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          ai_reasoning?: string | null
+          ai_reviewed_at?: string | null
+          ai_verdict?: string | null
+          context?: string | null
+          created_at?: string
+          id?: string
+          reason?: string
+          reported_user_id?: string
+          reporter_id?: string
+          resolution?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_leaderboard_member: {
         Args: { _lb: string; _user: string }
         Returns: boolean
@@ -354,7 +487,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -481,6 +614,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const
