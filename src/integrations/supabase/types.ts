@@ -227,6 +227,7 @@ export type Database = {
           interests: string[] | null
           latitude: number | null
           longitude: number | null
+          map_color: string
           updated_at: string
         }
         Insert: {
@@ -239,6 +240,7 @@ export type Database = {
           interests?: string[] | null
           latitude?: number | null
           longitude?: number | null
+          map_color?: string
           updated_at?: string
         }
         Update: {
@@ -251,6 +253,7 @@ export type Database = {
           interests?: string[] | null
           latitude?: number | null
           longitude?: number | null
+          map_color?: string
           updated_at?: string
         }
         Relationships: []

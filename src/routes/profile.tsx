@@ -25,6 +25,7 @@ function ProfilePage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ display_name: "", bio: "", city: "", interests: "" });
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [mapColor, setMapColor] = useState<string>("#2dd4a8");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
@@ -40,6 +41,7 @@ function ProfilePage() {
           interests: (data.interests ?? []).join(", "),
         });
         setAvatarUrl(data.avatar_url);
+        if ((data as { map_color?: string }).map_color) setMapColor((data as { map_color: string }).map_color);
       }
     });
   }, [user]);
@@ -48,12 +50,14 @@ function ProfilePage() {
     if (!user) return;
     const parsed = schema.safeParse(form);
     if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
+    if (!/^#[0-9a-f]{6}$/i.test(mapColor)) { toast.error("Pick a valid map color"); return; }
     setSaving(true);
     const { error } = await supabase.from("profiles").update({
       display_name: parsed.data.display_name,
       bio: parsed.data.bio || null,
       city: parsed.data.city || null,
       interests: parsed.data.interests ? parsed.data.interests.split(",").map(s => s.trim()).filter(Boolean) : [],
+      map_color: mapColor.toLowerCase(),
     }).eq("id", user.id);
     setSaving(false);
     if (error) toast.error(error.message);
@@ -107,6 +111,26 @@ function ProfilePage() {
               )}
             </div>
           ))}
+
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Map circle color</label>
+            <div className="flex items-center gap-3">
+              <input type="color" value={mapColor} onChange={(e) => setMapColor(e.target.value)}
+                className="size-12 rounded-xl bg-input/40 border border-border cursor-pointer" />
+              <div className="flex flex-wrap gap-2">
+                {["#2dd4a8", "#3b82f6", "#a855f7", "#ec4899", "#f97316", "#eab308", "#ef4444", "#ffffff"].map((c) => (
+                  <button key={c} type="button" onClick={() => setMapColor(c)}
+                    aria-label={`Pick ${c}`}
+                    className={`size-8 rounded-full border-2 transition ${mapColor.toLowerCase() === c ? "border-foreground scale-110" : "border-border"}`}
+                    style={{ background: c }} />
+                ))}
+              </div>
+              <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Preview</span>
+                <span className="size-8 rounded-full" style={{ background: mapColor, opacity: 0.4, border: `2px solid ${mapColor}` }} />
+              </div>
+            </div>
+          </div>
 
           <button onClick={save} disabled={saving}
             className="w-full rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground py-3 font-semibold disabled:opacity-50 hover:opacity-90 transition">

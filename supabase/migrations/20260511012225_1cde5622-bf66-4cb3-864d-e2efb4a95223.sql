@@ -1,0 +1,2 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS map_color text NOT NULL DEFAULT '#2dd4a8';
+ALTER TABLE public.profiles ADD CONSTRAINT profiles_map_color_format CHECK (map_color ~* '^#[0-9a-f]{6}$');
