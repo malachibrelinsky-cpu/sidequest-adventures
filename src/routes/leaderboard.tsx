@@ -18,11 +18,7 @@ export const Route = createFileRoute("/leaderboard")({
   component: LeaderboardPage,
 });
 
-const DIFFICULTY_POINTS = { easy: 10, medium: 25, hard: 60, epic: 150 } as const;
-type Difficulty = keyof typeof DIFFICULTY_POINTS;
-
 type Profile = { id: string; display_name: string; avatar_url: string | null };
-type Completion = { id: string; user_id: string; title: string; difficulty: Difficulty; points: number; created_at: string };
 type Leaderboard = { id: string; name: string; invite_code: string; owner_id: string };
 
 function LeaderboardPage() {
