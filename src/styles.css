@@ -160,4 +160,6 @@
   --background: oklch(0.08 0 0);
   --muted-foreground: oklch(0.85 0 0);
   --border: oklch(0.6 0 0);
+  --compass-color: oklch(0.99 0 0);
+  --compass-opacity: 0.7;
 }
