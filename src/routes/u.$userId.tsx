@@ -53,22 +53,21 @@ function PublicProfilePage() {
   const load = async () => {
     const [{ data: p }, { data: r }, { data: m }] = await Promise.all([
       supabase.from("profiles").select("id, display_name, avatar_url, bio, city, interests").eq("id", userId).maybeSingle(),
-      supabase.from("profile_ratings").select("id, rater_id, stars, review, created_at, rater:profiles!profile_ratings_rater_id_fkey(display_name, avatar_url)").eq("ratee_id", userId).order("created_at", { ascending: false }),
+      supabase.from("profile_ratings").select("id, rater_id, stars, review, created_at").eq("ratee_id", userId).order("created_at", { ascending: false }),
       supabase.from("user_moderation").select("status, reason, until").eq("user_id", userId).maybeSingle(),
     ]);
     setProfile(p as Profile | null);
-    // Fallback: query without join (FK may not be declared) — re-fetch raters separately
-    if (r && r.length > 0 && !(r[0] as any).rater) {
-      const raterIds = Array.from(new Set(r.map((x: any) => x.rater_id)));
+    let withRaters: Rating[] = [];
+    if (r && r.length > 0) {
+      const raterIds = Array.from(new Set(r.map((x) => x.rater_id)));
       const { data: raters } = await supabase.from("profiles").select("id, display_name, avatar_url").in("id", raterIds);
-      const map = new Map((raters ?? []).map((x) => [x.id, x]));
-      setRatings(r.map((x: any) => ({ ...x, rater: map.get(x.rater_id) ?? null })));
-    } else {
-      setRatings((r as Rating[]) ?? []);
+      const map = new Map((raters ?? []).map((x) => [x.id, { display_name: x.display_name, avatar_url: x.avatar_url }]));
+      withRaters = r.map((x) => ({ ...x, rater: map.get(x.rater_id) ?? null }));
     }
+    setRatings(withRaters);
     setMod(m as Mod);
     if (user && !isSelf) {
-      const mine = (r ?? []).find((x: any) => x.rater_id === user.id);
+      const mine = (r ?? []).find((x) => x.rater_id === user.id);
       if (mine) {
         setMyRating({ stars: mine.stars, review: mine.review ?? "" });
         setDraftStars(mine.stars);
