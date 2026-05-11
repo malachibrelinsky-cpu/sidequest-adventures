@@ -315,10 +315,10 @@ function LeafletMap({ me, members, quests, onSelect, onSelectQuest }: { me: Memb
       };
 
       if (me?.latitude != null && me.longitude != null) {
-        addUserCircle(me.latitude, me.longitude, "You (approx. 5-mi radius)", true, me.map_color || DEFAULT_COLOR);
+        addUserCircle(me.latitude, me.longitude, "You (approx. area)", true, me.map_color || DEFAULT_COLOR, me.id);
       }
       members.forEach((m) => {
-        addUserCircle(m.latitude!, m.longitude!, `${m.display_name} · ~5 mi area`, false, m.map_color || DEFAULT_COLOR, () => onSelect(m));
+        addUserCircle(m.latitude!, m.longitude!, `${m.display_name} · approx. area`, false, m.map_color || DEFAULT_COLOR, m.id, () => onSelect(m));
       });
       quests.forEach((q) => {
         const marker = L.marker([q.latitude, q.longitude], { icon: questMarker(q.points) })
