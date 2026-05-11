@@ -1,10 +1,10 @@
 import { createFileRoute, Link, useNavigate, useLocation } from "@tanstack/react-router";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
-import { Heart, MessageCircle, Image as ImageIcon, Send, Trophy, Pencil, Trash2, Check, X, RotateCw, RotateCcw, Crop as CropIcon, ZoomIn, ZoomOut, Users, MapPin, Clock, Sparkles, CheckCircle2, Upload } from "lucide-react";
+import { Heart, MessageCircle, Image as ImageIcon, Send, Trophy, Pencil, Trash2, Check, X, RotateCw, RotateCcw, Crop as CropIcon, ZoomIn, ZoomOut, Users, MapPin, Clock, Sparkles, CheckCircle2, Upload, Filter, List, Map as MapIcon } from "lucide-react";
 import { z } from "zod";
 
 export const Route = createFileRoute("/feed")({
@@ -86,6 +86,13 @@ function FeedPage() {
   const [fetching, setFetching] = useState(true);
   const [tab, setTab] = useState<Tab>(isQuestsRoute ? "quests" : "updates");
   const [userLoc, setUserLoc] = useState<{ lat: number; lon: number } | null>(null);
+  // Quests-route-only controls
+  const [diffFilter, setDiffFilter] = useState<Set<Difficulty>>(new Set());
+  const [maxDistance, setMaxDistance] = useState<number>(0); // 0 = any
+  const [timeWindow, setTimeWindow] = useState<"any" | "today" | "week">("any");
+  const [onlyJoinable, setOnlyJoinable] = useState(false);
+  const [questSort, setQuestSort] = useState<"nearest" | "soonest" | "points" | "newest">("nearest");
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
 
@@ -127,10 +134,10 @@ function FeedPage() {
     return a.dist - b.dist;
   };
 
-  const questsList = withDist.filter((x) => x.post.difficulty).sort(sortByProximity);
+  const baseQuestsList = withDist.filter((x) => x.post.difficulty).sort(sortByProximity);
   const updatesList = withDist.filter((x) => !x.post.difficulty);
   const allList = tab === "all"
-    ? [...questsList, ...updatesList].sort((a, b) => {
+    ? [...baseQuestsList, ...updatesList].sort((a, b) => {
         // Boost nearby quests, otherwise recency
         const aBoost = a.post.difficulty && a.dist != null && a.dist < 50 ? -a.dist * 1000 : 0;
         const bBoost = b.post.difficulty && b.dist != null && b.dist < 50 ? -b.dist * 1000 : 0;
@@ -140,53 +147,259 @@ function FeedPage() {
       })
     : [];
 
+  // Apply quests-route filters & sort
+  const questsList = useMemo(() => {
+    if (!isQuestsRoute) return baseQuestsList;
+    const now = Date.now();
+    const windowMs = timeWindow === "today" ? 24 * 3600 * 1000 : timeWindow === "week" ? 7 * 24 * 3600 * 1000 : 0;
+    const filteredQ = baseQuestsList.filter(({ post: p, dist }) => {
+      if (diffFilter.size > 0 && !diffFilter.has(p.difficulty as Difficulty)) return false;
+      if (maxDistance > 0 && (dist == null || dist > maxDistance)) return false;
+      if (windowMs > 0) {
+        if (!p.quest_time) return false;
+        const t = new Date(p.quest_time).getTime();
+        if (t < now || t > now + windowMs) return false;
+      }
+      if (onlyJoinable) {
+        if (p.completed_at) return false;
+        if (p.participants_needed != null && (p.quest_participants?.length ?? 0) >= p.participants_needed) return false;
+      }
+      return true;
+    });
+    const sorted = [...filteredQ];
+    sorted.sort((a, b) => {
+      switch (questSort) {
+        case "soonest": {
+          const ta = a.post.quest_time ? new Date(a.post.quest_time).getTime() : Infinity;
+          const tb = b.post.quest_time ? new Date(b.post.quest_time).getTime() : Infinity;
+          return ta - tb;
+        }
+        case "points": return (b.post.points ?? 0) - (a.post.points ?? 0);
+        case "newest": return new Date(b.post.created_at).getTime() - new Date(a.post.created_at).getTime();
+        case "nearest":
+        default: return sortByProximity(a, b);
+      }
+    });
+    return sorted;
+  }, [isQuestsRoute, baseQuestsList, diffFilter, maxDistance, timeWindow, onlyJoinable, questSort]);
+
   const filtered = (tab === "all" ? allList : tab === "quests" ? questsList : updatesList);
-  const counts = { all: posts.length, quests: questsList.length, updates: updatesList.length };
+  const counts = { all: posts.length, quests: baseQuestsList.length, updates: updatesList.length };
+
+  const toggleDiff = (d: Difficulty) => {
+    setDiffFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(d)) next.delete(d); else next.add(d);
+      return next;
+    });
+  };
+  const resetFilters = () => {
+    setDiffFilter(new Set());
+    setMaxDistance(0);
+    setTimeWindow("any");
+    setOnlyJoinable(false);
+    setQuestSort("nearest");
+  };
 
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <main className="mx-auto max-w-2xl px-4 py-10">
+      <main className={`mx-auto ${isQuestsRoute && viewMode === "map" ? "max-w-6xl" : "max-w-2xl"} px-4 py-10`}>
         <div className="mb-8 relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/15 via-accent/10 to-transparent p-6">
           <div className="absolute -top-12 -right-12 size-40 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
           <div className="relative">
-            <p className="text-[11px] uppercase tracking-[0.25em] text-primary font-bold mb-2">Your feed</p>
-            <h1 className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Quests & Adventures</h1>
-            <p className="text-muted-foreground text-sm">Joinable sidequests and photos from adventurers around you.</p>
+            <p className="text-[11px] uppercase tracking-[0.25em] text-primary font-bold mb-2">{isQuestsRoute ? "Sidequests" : "Your feed"}</p>
+            <h1 className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">{isQuestsRoute ? "Find your next quest" : "Quests & Adventures"}</h1>
+            <p className="text-muted-foreground text-sm">{isQuestsRoute ? "Filter by difficulty, distance, and time. Join with one tap." : "Joinable sidequests and photos from adventurers around you."}</p>
           </div>
         </div>
 
         <ComposePost onPosted={load} />
 
-        <div className="sticky top-2 z-10 mt-8 mb-5">
-          <div className="flex gap-1 p-1 rounded-full bg-card/80 backdrop-blur border border-border shadow-sm">
-            {(["all", "quests", "updates"] as const).map((t) => (
-              <button key={t} onClick={() => setTab(t)}
-                className={`flex-1 px-4 py-2 rounded-full text-sm font-semibold capitalize transition inline-flex items-center justify-center gap-1.5 ${tab === t ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_0_20px_-5px_var(--mint,theme(colors.primary.DEFAULT))]" : "text-muted-foreground hover:text-foreground"}`}>
-                <span>{t === "quests" ? "🎯 Sidequests" : t === "updates" ? "📸 Updates" : "✨ All"}</span>
-                <span className={`text-[10px] rounded-full px-1.5 py-0.5 ${tab === t ? "bg-black/20" : "bg-muted/50"}`}>{counts[t]}</span>
-              </button>
-            ))}
+        {isQuestsRoute ? (
+          <div className="mt-8 mb-5 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex rounded-full border border-border bg-card/60 p-1">
+                <button onClick={() => setViewMode("list")}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 transition ${viewMode === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                  <List className="size-3.5" /> List
+                </button>
+                <button onClick={() => setViewMode("map")}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 transition ${viewMode === "map" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                  <MapIcon className="size-3.5" /> Map
+                </button>
+              </div>
+              <span className="text-xs text-muted-foreground">{questsList.length} of {baseQuestsList.length} quests</span>
+              <div className="ml-auto inline-flex items-center gap-2">
+                <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Sort</label>
+                <select value={questSort} onChange={(e) => setQuestSort(e.target.value as typeof questSort)}
+                  className="rounded-full bg-card/60 border border-border text-xs px-3 py-1.5 outline-none focus:border-primary">
+                  <option value="nearest">Nearest</option>
+                  <option value="soonest">Soonest</option>
+                  <option value="points">Most points</option>
+                  <option value="newest">Newest</option>
+                </select>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border bg-card/40 backdrop-blur p-3 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1"><Filter className="size-3" /> Difficulty</span>
+                {DIFFICULTIES.map((d) => {
+                  const active = diffFilter.has(d);
+                  return (
+                    <button key={d} onClick={() => toggleDiff(d)}
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold capitalize transition ${active ? DIFFICULTY_STYLE[d] : "border-border text-muted-foreground hover:border-primary/50"}`}>
+                      {d}
+                    </button>
+                  );
+                })}
+                <button onClick={resetFilters} className="ml-auto text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline">Reset</button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Max distance: {maxDistance === 0 ? "Any" : `${maxDistance} km`}</p>
+                  <input type="range" min={0} max={200} step={5} value={maxDistance}
+                    onChange={(e) => setMaxDistance(Number(e.target.value))}
+                    className="w-full accent-primary" />
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">When</p>
+                  <div className="inline-flex rounded-full border border-border p-0.5 text-xs">
+                    {(["any", "today", "week"] as const).map((w) => (
+                      <button key={w} onClick={() => setTimeWindow(w)}
+                        className={`px-3 py-1 rounded-full font-semibold capitalize transition ${timeWindow === w ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                        {w === "any" ? "Anytime" : w === "today" ? "Today" : "This week"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 text-sm cursor-pointer self-end">
+                  <input type="checkbox" checked={onlyJoinable} onChange={(e) => setOnlyJoinable(e.target.checked)}
+                    className="size-4 rounded border-border accent-primary" />
+                  <span>Only joinable (open spots)</span>
+                </label>
+              </div>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="sticky top-2 z-10 mt-8 mb-5">
+            <div className="flex gap-1 p-1 rounded-full bg-card/80 backdrop-blur border border-border shadow-sm">
+              {(["all", "quests", "updates"] as const).map((t) => (
+                <button key={t} onClick={() => setTab(t)}
+                  className={`flex-1 px-4 py-2 rounded-full text-sm font-semibold capitalize transition inline-flex items-center justify-center gap-1.5 ${tab === t ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_0_20px_-5px_var(--mint,theme(colors.primary.DEFAULT))]" : "text-muted-foreground hover:text-foreground"}`}>
+                  <span>{t === "quests" ? "🎯 Sidequests" : t === "updates" ? "📸 Updates" : "✨ All"}</span>
+                  <span className={`text-[10px] rounded-full px-1.5 py-0.5 ${tab === t ? "bg-black/20" : "bg-muted/50"}`}>{counts[t]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {fetching ? (
           <p className="text-muted-foreground text-center py-12">Loading posts…</p>
+        ) : isQuestsRoute && viewMode === "map" ? (
+          <QuestsMiniMap
+            quests={questsList.map((x) => x.post)}
+            userLoc={userLoc}
+            onSelect={(id) => {
+              setViewMode("list");
+              setTimeout(() => {
+                const el = document.getElementById(`quest-${id}`);
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+              }, 80);
+            }}
+          />
         ) : filtered.length === 0 ? (
           <div className="bento-card p-10 text-center mt-6">
             <p className="text-muted-foreground">
-              {tab === "quests" ? "No joinable sidequests yet — post one with the trophy toggle above." :
+              {isQuestsRoute ? "No quests match your filters. Try widening the distance or clearing filters." :
+               tab === "quests" ? "No joinable sidequests yet — post one with the trophy toggle above." :
                tab === "updates" ? "No photo updates yet." :
                "No posts yet. Be the first to share a side quest."}
             </p>
           </div>
         ) : (
           <div className="space-y-6">
-            {filtered.map(({ post: p, dist }) => <PostCard key={p.id} post={p} onChange={load} currentUserId={user.id} distanceKm={dist} />)}
+            {filtered.map(({ post: p, dist }) => (
+              <div key={p.id} id={`quest-${p.id}`}>
+                <PostCard post={p} onChange={load} currentUserId={user.id} distanceKm={dist} />
+              </div>
+            ))}
           </div>
         )}
       </main>
       <SiteFooter />
+    </div>
+  );
+}
+
+function QuestsMiniMap({ quests, userLoc, onSelect }: {
+  quests: PostWithCoords[];
+  userLoc: { lat: number; lon: number } | null;
+  onSelect: (id: string) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  const layerRef = useRef<any>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const L = (await import("leaflet")).default;
+      if (cancelled || !ref.current || mapRef.current) return;
+      const center: [number, number] = userLoc ? [userLoc.lat, userLoc.lon] : [20, 0];
+      const zoom = userLoc ? 11 : 2;
+      mapRef.current = L.map(ref.current, { zoomControl: true, attributionControl: false }).setView(center, zoom);
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { maxZoom: 19 }).addTo(mapRef.current);
+      layerRef.current = L.layerGroup().addTo(mapRef.current);
+      setReady(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    (async () => {
+      const L = (await import("leaflet")).default;
+      if (!layerRef.current) return;
+      layerRef.current.clearLayers();
+      const pts: [number, number][] = [];
+      const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+
+      if (userLoc) {
+        L.circleMarker([userLoc.lat, userLoc.lon], { radius: 7, color: "#2dd4a8", fillColor: "#2dd4a8", fillOpacity: 0.9, weight: 2 })
+          .bindTooltip("You", { direction: "top" })
+          .addTo(layerRef.current);
+        pts.push([userLoc.lat, userLoc.lon]);
+      }
+
+      quests.forEach((q) => {
+        if (q.latitude == null || q.longitude == null) return;
+        const html = `<div style="position:relative;width:40px;height:50px;filter:drop-shadow(0 2px 8px rgba(255,180,60,.6))"><div style="position:absolute;top:0;left:0;width:40px;height:40px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:linear-gradient(135deg,#fbbf24,#f97316);border:2px solid #0d1b2a"></div><div style="position:absolute;top:7px;left:7px;width:26px;height:26px;border-radius:9999px;background:#0d1b2a;display:grid;place-items:center;color:#fbbf24;font-weight:800;font-size:10px">${q.points ?? "★"}</div></div>`;
+        const icon = L.divIcon({ html, className: "", iconSize: [40, 50], iconAnchor: [20, 46] });
+        L.marker([q.latitude, q.longitude], { icon })
+          .bindTooltip(escapeHtml(q.caption || "Sidequest"), { direction: "top" })
+          .on("click", () => onSelect(q.id))
+          .addTo(layerRef.current);
+        pts.push([q.latitude, q.longitude]);
+      });
+
+      if (pts.length > 1) {
+        const bounds = L.latLngBounds(pts);
+        mapRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+      }
+    })();
+  }, [ready, quests, userLoc, onSelect]);
+
+  return (
+    <div className="bento-card overflow-hidden p-0 relative h-[60vh] min-h-[420px]">
+      <div ref={ref} className="absolute inset-0 z-0" />
+      {quests.length === 0 && (
+        <div className="absolute inset-0 grid place-items-center pointer-events-none">
+          <p className="text-sm text-muted-foreground bg-card/80 backdrop-blur rounded-full px-4 py-2 border border-border">No quests with a location match your filters.</p>
+        </div>
+      )}
     </div>
   );
 }
