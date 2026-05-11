@@ -66,32 +66,79 @@ const pointsSchema = z.number().int().min(0).max(150);
 
 type Tab = "all" | "quests" | "updates";
 
+type PostWithCoords = Post & { latitude: number | null; longitude: number | null };
+
+function haversineKm(aLat: number, aLon: number, bLat: number, bLon: number): number {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat);
+  const dLon = toRad(bLon - aLon);
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
 function FeedPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<PostWithCoords[]>([]);
   const [fetching, setFetching] = useState(true);
   const [tab, setTab] = useState<Tab>("all");
+  const [userLoc, setUserLoc] = useState<{ lat: number; lon: number } | null>(null);
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
 
   const load = async () => {
     const { data, error } = await supabase
       .from("posts")
-      .select("id, caption, image_urls, created_at, user_id, difficulty, points, participants_needed, quest_time, location, completed_at, evidence_urls, profiles!posts_user_id_fkey(id, display_name, avatar_url), comments(id, body, created_at, user_id, profiles!comments_user_id_fkey(id, display_name, avatar_url)), quest_participants(user_id)")
+      .select("id, caption, image_urls, created_at, user_id, difficulty, points, participants_needed, quest_time, location, completed_at, evidence_urls, latitude, longitude, profiles!posts_user_id_fkey(id, display_name, avatar_url), comments(id, body, created_at, user_id, profiles!comments_user_id_fkey(id, display_name, avatar_url)), quest_participants(user_id)")
       .order("created_at", { ascending: false })
-      .limit(50);
+      .limit(100);
     if (error) { toast.error(error.message); return; }
-    setPosts((data as unknown as Post[]) ?? []);
+    setPosts((data as unknown as PostWithCoords[]) ?? []);
     setFetching(false);
   };
 
   useEffect(() => { if (user) load(); }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase.from("profiles").select("latitude, longitude").eq("id", user.id).maybeSingle();
+      if (data?.latitude != null && data?.longitude != null) setUserLoc({ lat: data.latitude, lon: data.longitude });
+    })();
+  }, [user]);
+
   if (loading || !user) return <div className="min-h-screen grid place-items-center text-muted-foreground">Loading…</div>;
 
-  const filtered = tab === "all" ? posts : tab === "quests" ? posts.filter((p) => p.difficulty) : posts.filter((p) => !p.difficulty);
-  const counts = { all: posts.length, quests: posts.filter((p) => p.difficulty).length, updates: posts.filter((p) => !p.difficulty).length };
+  const withDist = posts.map((p) => {
+    const d = userLoc && p.latitude != null && p.longitude != null
+      ? haversineKm(userLoc.lat, userLoc.lon, p.latitude, p.longitude) : null;
+    return { post: p, dist: d };
+  });
+
+  // For quests tab: sort by distance asc (unknown distance last). For all tab: prefer closer quests, then recency.
+  const sortByProximity = (a: { post: PostWithCoords; dist: number | null }, b: { post: PostWithCoords; dist: number | null }) => {
+    if (a.dist == null && b.dist == null) return new Date(b.post.created_at).getTime() - new Date(a.post.created_at).getTime();
+    if (a.dist == null) return 1;
+    if (b.dist == null) return -1;
+    return a.dist - b.dist;
+  };
+
+  const questsList = withDist.filter((x) => x.post.difficulty).sort(sortByProximity);
+  const updatesList = withDist.filter((x) => !x.post.difficulty);
+  const allList = tab === "all"
+    ? [...questsList, ...updatesList].sort((a, b) => {
+        // Boost nearby quests, otherwise recency
+        const aBoost = a.post.difficulty && a.dist != null && a.dist < 50 ? -a.dist * 1000 : 0;
+        const bBoost = b.post.difficulty && b.dist != null && b.dist < 50 ? -b.dist * 1000 : 0;
+        const aScore = aBoost + new Date(a.post.created_at).getTime() / 1e6;
+        const bScore = bBoost + new Date(b.post.created_at).getTime() / 1e6;
+        return bScore - aScore;
+      })
+    : [];
+
+  const filtered = (tab === "all" ? allList : tab === "quests" ? questsList : updatesList);
+  const counts = { all: posts.length, quests: questsList.length, updates: updatesList.length };
 
   return (
     <div className="min-h-screen">
@@ -126,7 +173,7 @@ function FeedPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {filtered.map((p) => <PostCard key={p.id} post={p} onChange={load} currentUserId={user.id} />)}
+            {filtered.map(({ post: p, dist }) => <PostCard key={p.id} post={p} onChange={load} currentUserId={user.id} distanceKm={dist} />)}
           </div>
         )}
       </main>
@@ -357,7 +404,7 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
   );
 }
 
-function PostCard({ post, onChange, currentUserId }: { post: Post; onChange: () => void; currentUserId: string }) {
+function PostCard({ post, onChange, currentUserId, distanceKm }: { post: Post; onChange: () => void; currentUserId: string; distanceKm?: number | null }) {
   const navigate = useNavigate();
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
@@ -474,6 +521,11 @@ function PostCard({ post, onChange, currentUserId }: { post: Post; onChange: () 
                 <div className="min-w-0">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Where</p>
                   <p className="font-semibold truncate">{post.location}</p>
+                  {distanceKm != null && (
+                    <p className="text-[11px] text-primary/80 font-medium">
+                      {distanceKm < 1 ? `${Math.round(distanceKm * 1000)} m away` : `${distanceKm.toFixed(distanceKm < 10 ? 1 : 0)} km away`}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
