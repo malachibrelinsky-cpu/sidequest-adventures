@@ -136,7 +136,9 @@ export type Database = {
           evidence_urls: string[]
           id: string
           image_urls: string[]
+          latitude: number | null
           location: string | null
+          longitude: number | null
           participants_needed: number | null
           points: number | null
           quest_time: string | null
@@ -150,7 +152,9 @@ export type Database = {
           evidence_urls?: string[]
           id?: string
           image_urls?: string[]
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           participants_needed?: number | null
           points?: number | null
           quest_time?: string | null
@@ -164,7 +168,9 @@ export type Database = {
           evidence_urls?: string[]
           id?: string
           image_urls?: string[]
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           participants_needed?: number | null
           points?: number | null
           quest_time?: string | null
