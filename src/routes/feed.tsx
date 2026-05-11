@@ -521,6 +521,11 @@ function PostCard({ post, onChange, currentUserId, distanceKm }: { post: Post; o
                 <div className="min-w-0">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Where</p>
                   <p className="font-semibold truncate">{post.location}</p>
+                  {distanceKm != null && (
+                    <p className="text-[11px] text-primary/80 font-medium">
+                      {distanceKm < 1 ? `${Math.round(distanceKm * 1000)} m away` : `${distanceKm.toFixed(distanceKm < 10 ? 1 : 0)} km away`}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
