@@ -12,14 +12,18 @@ export const Route = createFileRoute("/feed")({
   component: FeedPage,
 });
 
-const DIFFICULTIES = ["easy", "medium", "hard", "epic"] as const;
+const DIFFICULTIES = ["common", "rare", "epic", "impossible"] as const;
 type Difficulty = typeof DIFFICULTIES[number];
-const DIFFICULTY_DEFAULTS: Record<Difficulty, number> = { easy: 10, medium: 25, hard: 60, epic: 150 };
-const DIFFICULTY_STYLE: Record<Difficulty, string> = {
+const DIFFICULTY_DEFAULTS: Record<Difficulty, number> = { common: 10, rare: 25, epic: 100, impossible: 150 };
+const DIFFICULTY_STYLE: Record<string, string> = {
+  common: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  rare: "bg-blue-500/15 text-blue-400 border-blue-500/30",
+  epic: "bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30",
+  impossible: "bg-rose-500/15 text-rose-400 border-rose-500/30",
+  // legacy fallbacks
   easy: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
   medium: "bg-blue-500/15 text-blue-400 border-blue-500/30",
   hard: "bg-orange-500/15 text-orange-400 border-orange-500/30",
-  epic: "bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30",
 };
 
 type Profile = { id: string; display_name: string; avatar_url: string | null };
@@ -62,7 +66,7 @@ async function rotateImageFile(file: File, degrees: number): Promise<File> {
     URL.revokeObjectURL(url);
   }
 }
-const pointsSchema = z.number().int().min(0).max(150);
+
 
 type Tab = "all" | "quests" | "updates";
 
@@ -411,8 +415,7 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
   const [rotations, setRotations] = useState<number[]>([]);
   const [uploading, setUploading] = useState(false);
   const [isQuest, setIsQuest] = useState(false);
-  const [difficulty, setDifficulty] = useState<Difficulty>("medium");
-  const [points, setPoints] = useState<string>("25");
+  const [difficulty, setDifficulty] = useState<Difficulty>("common");
   const [participantsNeeded, setParticipantsNeeded] = useState<string>("4");
   const [questTime, setQuestTime] = useState<string>("");
   const [location, setLocation] = useState<string>("");
@@ -442,7 +445,6 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
 
   const pickDifficulty = (d: Difficulty) => {
     setDifficulty(d);
-    setPoints(String(DIFFICULTY_DEFAULTS[d]));
   };
 
   const submit = async () => {
@@ -452,14 +454,13 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
     if (!cap.success) { toast.error("Caption too long"); return; }
     let questFields: { difficulty: Difficulty; points: number; participants_needed: number; quest_time: string; location: string } | null = null;
     if (isQuest) {
-      const parsed = pointsSchema.safeParse(Number(points));
-      if (!parsed.success) { toast.error("Points must be a whole number from 0 to 150"); return; }
+      const pts = DIFFICULTY_DEFAULTS[difficulty];
       const pn = Number(participantsNeeded);
       if (!Number.isInteger(pn) || pn < 1 || pn > 50) { toast.error("Participants must be 1–50"); return; }
       if (!questTime) { toast.error("Pick a time for the quest"); return; }
       const loc = location.trim();
       if (!loc) { toast.error("Add a location"); return; }
-      questFields = { difficulty, points: parsed.data, participants_needed: pn, quest_time: new Date(questTime).toISOString(), location: loc };
+      questFields = { difficulty, points: pts, participants_needed: pn, quest_time: new Date(questTime).toISOString(), location: loc };
     }
     setUploading(true);
     try {
@@ -497,7 +498,7 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
         longitude: lon,
       });
       if (error) throw error;
-      setCaption(""); setFiles([]); setRotations([]); setIsQuest(false); setDifficulty("medium"); setPoints("25");
+      setCaption(""); setFiles([]); setRotations([]); setIsQuest(false); setDifficulty("common");
       setParticipantsNeeded("4"); setQuestTime(""); setLocation("");
       if (fileRef.current) fileRef.current.value = "";
       toast.success("Posted!");
@@ -568,23 +569,16 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
         {isQuest && (
           <div className="mt-3 space-y-3 rounded-xl bg-input/20 border border-border p-3">
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Difficulty</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Tier · point worth</p>
               <div className="grid grid-cols-4 gap-2">
                 {DIFFICULTIES.map((d) => (
                   <button key={d} type="button" onClick={() => pickDifficulty(d)}
-                    className={`rounded-lg border px-2 py-2 text-xs font-semibold capitalize transition ${difficulty === d ? `${DIFFICULTY_STYLE[d]}` : "border-border text-muted-foreground hover:border-primary/50"}`}>
-                    {d}
+                    className={`rounded-lg border px-2 py-2 text-xs font-semibold capitalize transition flex flex-col items-center gap-0.5 ${difficulty === d ? `${DIFFICULTY_STYLE[d]}` : "border-border text-muted-foreground hover:border-primary/50"}`}>
+                    <span>{d}</span>
+                    <span className="text-[10px] opacity-70">{DIFFICULTY_DEFAULTS[d]} pts</span>
                   </button>
                 ))}
               </div>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">
-                Point worth <span className="opacity-60">(0–150, suggested {DIFFICULTY_DEFAULTS[difficulty]})</span>
-              </p>
-              <input type="number" min={0} max={150} value={points}
-                onChange={(e) => setPoints(e.target.value)}
-                className="w-32 rounded-lg bg-input/40 border border-border px-3 py-2 text-sm outline-none focus:border-primary" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
