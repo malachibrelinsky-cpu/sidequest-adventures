@@ -13,6 +13,7 @@ import { Route as QuestsRouteImport } from './routes/quests'
 import { Route as QuanRouteImport } from './routes/quan'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as ModerationRouteImport } from './routes/moderation'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
@@ -43,6 +44,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ModerationRoute = ModerationRouteImport.update({
+  id: '/moderation',
+  path: '/moderation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MapRoute = MapRouteImport.update({
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/how-it-works': typeof HowItWorksRoute
   '/leaderboard': typeof LeaderboardRoute
   '/map': typeof MapRoute
+  '/moderation': typeof ModerationRoute
   '/pricing': typeof PricingRoute
   '/profile': typeof ProfileRoute
   '/quan': typeof QuanRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/how-it-works': typeof HowItWorksRoute
   '/leaderboard': typeof LeaderboardRoute
   '/map': typeof MapRoute
+  '/moderation': typeof ModerationRoute
   '/pricing': typeof PricingRoute
   '/profile': typeof ProfileRoute
   '/quan': typeof QuanRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/how-it-works': typeof HowItWorksRoute
   '/leaderboard': typeof LeaderboardRoute
   '/map': typeof MapRoute
+  '/moderation': typeof ModerationRoute
   '/pricing': typeof PricingRoute
   '/profile': typeof ProfileRoute
   '/quan': typeof QuanRoute
@@ -163,6 +172,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/leaderboard'
     | '/map'
+    | '/moderation'
     | '/pricing'
     | '/profile'
     | '/quan'
@@ -180,6 +190,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/leaderboard'
     | '/map'
+    | '/moderation'
     | '/pricing'
     | '/profile'
     | '/quan'
@@ -197,6 +208,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/leaderboard'
     | '/map'
+    | '/moderation'
     | '/pricing'
     | '/profile'
     | '/quan'
@@ -215,6 +227,7 @@ export interface RootRouteChildren {
   HowItWorksRoute: typeof HowItWorksRoute
   LeaderboardRoute: typeof LeaderboardRoute
   MapRoute: typeof MapRoute
+  ModerationRoute: typeof ModerationRoute
   PricingRoute: typeof PricingRoute
   ProfileRoute: typeof ProfileRoute
   QuanRoute: typeof QuanRoute
@@ -253,6 +266,13 @@ declare module '@tanstack/react-router' {
       path: '/pricing'
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/moderation': {
+      id: '/moderation'
+      path: '/moderation'
+      fullPath: '/moderation'
+      preLoaderRoute: typeof ModerationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/map': {
@@ -343,6 +363,7 @@ const rootRouteChildren: RootRouteChildren = {
   HowItWorksRoute: HowItWorksRoute,
   LeaderboardRoute: LeaderboardRoute,
   MapRoute: MapRoute,
+  ModerationRoute: ModerationRoute,
   PricingRoute: PricingRoute,
   ProfileRoute: ProfileRoute,
   QuanRoute: QuanRoute,

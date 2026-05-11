@@ -1,12 +1,23 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Compass, LogOut } from "lucide-react";
+import { Compass, LogOut, ShieldCheck } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { usePremium } from "@/hooks/use-premium";
+import { supabase } from "@/integrations/supabase/client";
 
 export function SiteHeader() {
   const { user, signOut } = useAuth();
   const { isPremium } = usePremium();
   const navigate = useNavigate();
+  const [isMod, setIsMod] = useState(false);
+
+  useEffect(() => {
+    if (!user) { setIsMod(false); return; }
+    supabase.from("user_roles").select("role").eq("user_id", user.id).then(({ data }) => {
+      const roles = (data ?? []).map((r) => r.role);
+      setIsMod(roles.includes("admin") || roles.includes("moderator"));
+    });
+  }, [user]);
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/60 border-b border-border">
