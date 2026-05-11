@@ -21,6 +21,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MessagesIndexRouteImport } from './routes/messages.index'
+import { Route as UUserIdRouteImport } from './routes/u.$userId'
 import { Route as QuestChatQuestIdRouteImport } from './routes/quest-chat.$questId'
 import { Route as MessagesUserIdRouteImport } from './routes/messages.$userId'
 
@@ -84,6 +85,11 @@ const MessagesIndexRoute = MessagesIndexRouteImport.update({
   path: '/messages/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UUserIdRoute = UUserIdRouteImport.update({
+  id: '/u/$userId',
+  path: '/u/$userId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const QuestChatQuestIdRoute = QuestChatQuestIdRouteImport.update({
   id: '/quest-chat/$questId',
   path: '/quest-chat/$questId',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/quests': typeof QuestsRoute
   '/messages/$userId': typeof MessagesUserIdRoute
   '/quest-chat/$questId': typeof QuestChatQuestIdRoute
+  '/u/$userId': typeof UUserIdRoute
   '/messages/': typeof MessagesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/quests': typeof QuestsRoute
   '/messages/$userId': typeof MessagesUserIdRoute
   '/quest-chat/$questId': typeof QuestChatQuestIdRoute
+  '/u/$userId': typeof UUserIdRoute
   '/messages': typeof MessagesIndexRoute
 }
 export interface FileRoutesById {
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/quests': typeof QuestsRoute
   '/messages/$userId': typeof MessagesUserIdRoute
   '/quest-chat/$questId': typeof QuestChatQuestIdRoute
+  '/u/$userId': typeof UUserIdRoute
   '/messages/': typeof MessagesIndexRoute
 }
 export interface FileRouteTypes {
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/quests'
     | '/messages/$userId'
     | '/quest-chat/$questId'
+    | '/u/$userId'
     | '/messages/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/quests'
     | '/messages/$userId'
     | '/quest-chat/$questId'
+    | '/u/$userId'
     | '/messages'
   id:
     | '__root__'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/quests'
     | '/messages/$userId'
     | '/quest-chat/$questId'
+    | '/u/$userId'
     | '/messages/'
   fileRoutesById: FileRoutesById
 }
@@ -209,6 +221,7 @@ export interface RootRouteChildren {
   QuestsRoute: typeof QuestsRoute
   MessagesUserIdRoute: typeof MessagesUserIdRoute
   QuestChatQuestIdRoute: typeof QuestChatQuestIdRoute
+  UUserIdRoute: typeof UUserIdRoute
   MessagesIndexRoute: typeof MessagesIndexRoute
 }
 
@@ -298,6 +311,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MessagesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/u/$userId': {
+      id: '/u/$userId'
+      path: '/u/$userId'
+      fullPath: '/u/$userId'
+      preLoaderRoute: typeof UUserIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/quest-chat/$questId': {
       id: '/quest-chat/$questId'
       path: '/quest-chat/$questId'
@@ -329,6 +349,7 @@ const rootRouteChildren: RootRouteChildren = {
   QuestsRoute: QuestsRoute,
   MessagesUserIdRoute: MessagesUserIdRoute,
   QuestChatQuestIdRoute: QuestChatQuestIdRoute,
+  UUserIdRoute: UUserIdRoute,
   MessagesIndexRoute: MessagesIndexRoute,
 }
 export const routeTree = rootRouteImport
