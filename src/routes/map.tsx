@@ -281,12 +281,19 @@ function LeafletMap({ me, members, quests, onSelect, onSelectQuest }: { me: Memb
       if (!layerRef.current) return;
       layerRef.current.clearLayers();
 
-      const mintMarker = (label: string, isMe: boolean, avatar: string | null) => {
-        const initial = label[0]?.toUpperCase() ?? "?";
-        const html = isMe
-          ? `<div style="position:relative;width:42px;height:42px"><div style="position:absolute;inset:0;border-radius:9999px;background:rgba(115,255,184,.4);animation:ping 1.5s cubic-bezier(0,0,.2,1) infinite"></div><div style="position:relative;width:42px;height:42px;border-radius:9999px;background:linear-gradient(135deg,#2dd4a8,#73ffb8);display:grid;place-items:center;color:#0d1b2a;font-weight:800;font-size:11px;border:3px solid #0d1b2a;box-shadow:0 0 20px #2dd4a8">You</div></div>`
-          : `<div style="width:38px;height:38px;border-radius:9999px;background:#0d1b2a;border:2px solid #2dd4a8;display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px;overflow:hidden;box-shadow:0 0 18px -4px #2dd4a8">${avatar ? `<img src="${avatar}" style="width:100%;height:100%;object-fit:cover"/>` : initial}</div>`;
-        return L.divIcon({ html, className: "", iconSize: [42, 42], iconAnchor: [21, 21] });
+      const FIVE_MILES_M = 8046.72;
+      const addUserCircle = (lat: number, lon: number, label: string, isMe: boolean, onClick?: () => void) => {
+        const color = isMe ? "#73ffb8" : "#2dd4a8";
+        const circle = L.circle([lat, lon], {
+          radius: FIVE_MILES_M,
+          color,
+          weight: 2,
+          opacity: 0.7,
+          fillColor: color,
+          fillOpacity: isMe ? 0.18 : 0.12,
+        }).bindTooltip(label, { direction: "top", sticky: true });
+        if (onClick) circle.on("click", onClick);
+        circle.addTo(layerRef.current);
       };
 
       const questMarker = (points: number | null) => {
@@ -295,15 +302,10 @@ function LeafletMap({ me, members, quests, onSelect, onSelectQuest }: { me: Memb
       };
 
       if (me?.latitude != null && me.longitude != null) {
-        L.marker([me.latitude, me.longitude], { icon: mintMarker("You", true, null) })
-          .bindTooltip("You", { direction: "top" })
-          .addTo(layerRef.current);
+        addUserCircle(me.latitude, me.longitude, "You (approx. 5-mi radius)", true);
       }
       members.forEach((m) => {
-        const marker = L.marker([m.latitude!, m.longitude!], { icon: mintMarker(m.display_name, false, m.avatar_url) })
-          .bindTooltip(m.display_name, { direction: "top" })
-          .on("click", () => onSelect(m));
-        marker.addTo(layerRef.current);
+        addUserCircle(m.latitude!, m.longitude!, `${m.display_name} · ~5 mi area`, false, () => onSelect(m));
       });
       quests.forEach((q) => {
         const marker = L.marker([q.latitude, q.longitude], { icon: questMarker(q.points) })
