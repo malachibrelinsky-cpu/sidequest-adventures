@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
-import { MapPin, Navigation, Sparkles, MessageCircle } from "lucide-react";
+import { MapPin, Navigation, Sparkles, MessageCircle, Trophy, Users, Clock } from "lucide-react";
 
 export const Route = createFileRoute("/map")({
   head: () => ({
@@ -25,6 +25,14 @@ type Member = {
   latitude: number | null; longitude: number | null;
 };
 
+type Quest = {
+  id: string; caption: string | null; location: string | null;
+  difficulty: string | null; points: number | null;
+  participants_needed: number | null; quest_time: string | null;
+  latitude: number; longitude: number;
+  profiles: { display_name: string; avatar_url: string | null } | null;
+};
+
 function MapPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -32,6 +40,8 @@ function MapPage() {
   const [me, setMe] = useState<Member | null>(null);
   const [savingLoc, setSavingLoc] = useState(false);
   const [selected, setSelected] = useState<Member | null>(null);
+  const [quests, setQuests] = useState<Quest[]>([]);
+  const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
 
@@ -41,6 +51,15 @@ function MapPage() {
     const list = (data ?? []) as Member[];
     setMembers(list.filter((m) => m.id !== user.id && m.latitude != null && m.longitude != null));
     setMe(list.find((m) => m.id === user.id) ?? null);
+
+    const { data: qData } = await supabase
+      .from("posts")
+      .select("id, caption, location, difficulty, points, participants_needed, quest_time, latitude, longitude, profiles!posts_user_id_fkey(display_name, avatar_url)")
+      .not("difficulty", "is", null)
+      .not("latitude", "is", null)
+      .is("completed_at", null)
+      .order("created_at", { ascending: false });
+    setQuests((qData ?? []) as unknown as Quest[]);
   };
   useEffect(() => { if (user) load(); }, [user]);
 
@@ -99,21 +118,44 @@ function MapPage() {
           <div>
             <p className="text-primary font-semibold text-sm mb-2">LIVE MAP</p>
             <h1 className="text-4xl md:text-5xl font-bold">Questers worldwide</h1>
-            <p className="text-muted-foreground mt-2">Real GPS, real cities. Tap a pin to start a chat.</p>
+            <p className="text-muted-foreground mt-2">Real GPS, real cities. Tap a pin to start a chat or join a quest.</p>
           </div>
           <LocationControls onGPS={useGPS} onCity={searchCity} saving={savingLoc} />
         </div>
 
         <div className="grid lg:grid-cols-[1fr_320px] gap-5">
           <div className="bento-card relative aspect-[4/3] lg:aspect-auto lg:min-h-[600px] overflow-hidden p-0">
-            <LeafletMap me={me} members={members} onSelect={setSelected} />
+            <LeafletMap me={me} members={members} quests={quests} onSelect={(m) => { setSelected(m); setSelectedQuest(null); }} onSelectQuest={(q) => { setSelectedQuest(q); setSelected(null); }} />
           </div>
 
           <aside className="bento-card p-5 space-y-4">
             <div className="flex items-center gap-2 text-sm text-primary font-semibold">
-              <Sparkles className="size-4" /> {members.length} questers on the map
+              <Sparkles className="size-4" /> {members.length} questers · {quests.length} active quests
             </div>
-            {selected ? (
+            {selectedQuest ? (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Trophy className="size-4 text-primary" />
+                  <p className="text-xs uppercase tracking-wide text-primary font-bold">{selectedQuest.difficulty} · {selectedQuest.points} pts</p>
+                </div>
+                <p className="font-bold mb-2 line-clamp-3">{selectedQuest.caption || "Sidequest"}</p>
+                {selectedQuest.location && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1"><MapPin className="size-3" />{selectedQuest.location}</p>
+                )}
+                {selectedQuest.quest_time && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1"><Clock className="size-3" />{new Date(selectedQuest.quest_time).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</p>
+                )}
+                {selectedQuest.participants_needed != null && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mb-3"><Users className="size-3" />Needs {selectedQuest.participants_needed}</p>
+                )}
+                {selectedQuest.profiles && (
+                  <p className="text-xs text-muted-foreground mb-3">Hosted by {selectedQuest.profiles.display_name}</p>
+                )}
+                <Link to="/feed" className="w-full rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground py-2.5 font-semibold text-sm hover:opacity-90 transition flex items-center justify-center gap-2">
+                  View in feed
+                </Link>
+              </div>
+            ) : selected ? (
               <div>
                 <div className="flex items-center gap-3 mb-3">
                   <div className="size-14 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground font-bold overflow-hidden">
@@ -136,19 +178,41 @@ function MapPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {members.length === 0 && <p className="text-sm text-muted-foreground">No one's on the map yet — set your location or invite a friend.</p>}
-                {members.slice(0, 8).map((m) => (
-                  <button key={m.id} onClick={() => setSelected(m)}
-                    className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/40 transition text-left">
-                    <div className="size-9 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground text-sm font-bold overflow-hidden">
-                      {m.avatar_url ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover"/> : m.display_name[0]?.toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate">{m.display_name}</p>
-                      {m.city && <p className="text-xs text-muted-foreground truncate">{m.city}</p>}
-                    </div>
-                  </button>
-                ))}
+                {quests.length > 0 && (
+                  <>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold pt-1">Active quests</p>
+                    {quests.slice(0, 5).map((q) => (
+                      <button key={q.id} onClick={() => setSelectedQuest(q)}
+                        className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/40 transition text-left">
+                        <div className="size-9 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground">
+                          <Trophy className="size-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate">{q.caption || "Sidequest"}</p>
+                          {q.location && <p className="text-xs text-muted-foreground truncate">{q.location} · {q.points} pts</p>}
+                        </div>
+                      </button>
+                    ))}
+                  </>
+                )}
+                {members.length === 0 && quests.length === 0 && <p className="text-sm text-muted-foreground">No one's on the map yet — set your location or invite a friend.</p>}
+                {members.length > 0 && (
+                  <>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold pt-3">Questers</p>
+                    {members.slice(0, 6).map((m) => (
+                      <button key={m.id} onClick={() => setSelected(m)}
+                        className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/40 transition text-left">
+                        <div className="size-9 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground text-sm font-bold overflow-hidden">
+                          {m.avatar_url ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover"/> : m.display_name[0]?.toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate">{m.display_name}</p>
+                          {m.city && <p className="text-xs text-muted-foreground truncate">{m.city}</p>}
+                        </div>
+                      </button>
+                    ))}
+                  </>
+                )}
               </div>
             )}
           </aside>
@@ -183,7 +247,7 @@ function LocationControls({ onGPS, onCity, saving }: { onGPS: () => void; onCity
   );
 }
 
-function LeafletMap({ me, members, onSelect }: { me: Member | null; members: Member[]; onSelect: (m: Member) => void }) {
+function LeafletMap({ me, members, quests, onSelect, onSelectQuest }: { me: Member | null; members: Member[]; quests: Quest[]; onSelect: (m: Member) => void; onSelectQuest: (q: Quest) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const layerRef = useRef<any>(null);
@@ -225,6 +289,11 @@ function LeafletMap({ me, members, onSelect }: { me: Member | null; members: Mem
         return L.divIcon({ html, className: "", iconSize: [42, 42], iconAnchor: [21, 21] });
       };
 
+      const questMarker = (points: number | null) => {
+        const html = `<div style="position:relative;width:44px;height:54px;filter:drop-shadow(0 2px 8px rgba(255,180,60,.6))"><div style="position:absolute;top:0;left:0;width:44px;height:44px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:linear-gradient(135deg,#fbbf24,#f97316);border:2px solid #0d1b2a"></div><div style="position:absolute;top:8px;left:8px;width:28px;height:28px;border-radius:9999px;background:#0d1b2a;display:grid;place-items:center;color:#fbbf24;font-weight:800;font-size:10px">${points ?? "★"}</div></div>`;
+        return L.divIcon({ html, className: "", iconSize: [44, 54], iconAnchor: [22, 50] });
+      };
+
       if (me?.latitude != null && me.longitude != null) {
         L.marker([me.latitude, me.longitude], { icon: mintMarker("You", true, null) })
           .bindTooltip("You", { direction: "top" })
@@ -236,13 +305,19 @@ function LeafletMap({ me, members, onSelect }: { me: Member | null; members: Mem
           .on("click", () => onSelect(m));
         marker.addTo(layerRef.current);
       });
+      quests.forEach((q) => {
+        const marker = L.marker([q.latitude, q.longitude], { icon: questMarker(q.points) })
+          .bindTooltip(q.caption || "Sidequest", { direction: "top" })
+          .on("click", () => onSelectQuest(q));
+        marker.addTo(layerRef.current);
+      });
 
       // Recenter if we just got a location
       if (me?.latitude != null && me.longitude != null && mapRef.current.getZoom() < 5) {
         mapRef.current.setView([me.latitude, me.longitude], 11);
       }
     })();
-  }, [ready, me, members, onSelect]);
+  }, [ready, me, members, quests, onSelect, onSelectQuest]);
 
   return (
     <>

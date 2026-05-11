@@ -206,6 +206,15 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
         const { data } = supabase.storage.from("post-images").getPublicUrl(path);
         urls.push(data.publicUrl);
       }
+      let lat: number | null = null;
+      let lon: number | null = null;
+      if (questFields?.location) {
+        try {
+          const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(questFields.location)}`);
+          const j = await r.json();
+          if (j[0]) { lat = parseFloat(j[0].lat); lon = parseFloat(j[0].lon); }
+        } catch {}
+      }
       const { error } = await supabase.from("posts").insert({
         user_id: user.id,
         caption: caption.trim() || null,
@@ -215,6 +224,8 @@ function ComposePost({ onPosted }: { onPosted: () => void }) {
         participants_needed: questFields?.participants_needed ?? null,
         quest_time: questFields?.quest_time ?? null,
         location: questFields?.location ?? null,
+        latitude: lat,
+        longitude: lon,
       });
       if (error) throw error;
       setCaption(""); setFiles([]); setRotations([]); setIsQuest(false); setDifficulty("medium"); setPoints("25");
