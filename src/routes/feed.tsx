@@ -103,8 +103,9 @@ function FeedPage() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase.from("profiles").select("latitude, longitude").eq("id", user.id).maybeSingle();
-      if (data?.latitude != null && data?.longitude != null) setUserLoc({ lat: data.latitude, lon: data.longitude });
+      const { data } = await supabase.rpc("get_my_location");
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row?.latitude != null && row?.longitude != null) setUserLoc({ lat: row.latitude, lon: row.longitude });
     })();
   }, [user]);
 
