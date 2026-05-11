@@ -66,7 +66,7 @@ async function rotateImageFile(file: File, degrees: number): Promise<File> {
     URL.revokeObjectURL(url);
   }
 }
-const pointsSchema = z.number().int().min(0).max(150);
+
 
 type Tab = "all" | "quests" | "updates";
 
