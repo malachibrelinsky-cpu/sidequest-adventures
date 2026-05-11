@@ -81,7 +81,7 @@ function haversineKm(aLat: number, aLon: number, bLat: number, bLon: number): nu
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
-function FeedPage() {
+export function FeedPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
