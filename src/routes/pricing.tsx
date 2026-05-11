@@ -1,6 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { Check, Sparkles, Zap } from "lucide-react";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
+import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -32,8 +35,27 @@ const premium = [
 ];
 
 function PricingPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { openCheckout, closeCheckout, isOpen, checkoutElement } = useStripeCheckout();
+
+  const handleGoPremium = () => {
+    if (!user) {
+      navigate({ to: "/auth" });
+      return;
+    }
+    openCheckout({
+      priceId: "premium_monthly",
+      quantity: 1,
+      customerEmail: user.email ?? undefined,
+      userId: user.id,
+      returnUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+    });
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
+      <PaymentTestModeBanner />
       <SiteHeader />
       <main className="mx-auto w-full max-w-6xl px-6 py-16 flex-1">
         <div className="text-center mb-14">
@@ -96,14 +118,33 @@ function PricingPage() {
                 </li>
               ))}
             </ul>
-            <Link
-              to="/auth"
+            <button
+              type="button"
+              onClick={handleGoPremium}
               className="rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-5 py-3 text-sm font-semibold text-center hover:opacity-90 transition shadow-[0_0_30px_-5px_var(--mint)]"
             >
               Go Premium
-            </Link>
+            </button>
           </div>
         </div>
+
+        {isOpen && (
+          <div className="fixed inset-0 z-[100] bg-background/90 backdrop-blur-md overflow-y-auto">
+            <div className="mx-auto max-w-3xl px-4 py-8">
+              <div className="flex justify-end mb-3">
+                <button
+                  onClick={closeCheckout}
+                  className="rounded-full border border-border bg-card/80 px-4 py-2 text-sm font-medium hover:border-primary transition"
+                >
+                  Close
+                </button>
+              </div>
+              <div className="rounded-2xl bg-card p-2">
+                {checkoutElement}
+              </div>
+            </div>
+          </div>
+        )}
 
         <p className="text-center text-xs text-muted-foreground mt-10">
           Cancel anytime. Prices in USD. Taxes calculated at checkout.
