@@ -288,7 +288,7 @@ function ComposePost({ onPosted, forceQuest = false }: { onPosted: () => void; f
         longitude: lon,
       });
       if (error) throw error;
-      setCaption(""); setFiles([]); setRotations([]); setIsQuest(false); setDifficulty("medium"); setPoints("25");
+      setCaption(""); setFiles([]); setRotations([]); setIsQuest(forceQuest); setDifficulty("medium"); setPoints("25");
       setParticipantsNeeded("4"); setQuestTime(""); setLocation("");
       if (fileRef.current) fileRef.current.value = "";
       toast.success("Posted!");
@@ -302,7 +302,7 @@ function ComposePost({ onPosted, forceQuest = false }: { onPosted: () => void; f
     <div className="bento-card p-5">
       <textarea
         value={caption} onChange={(e) => setCaption(e.target.value)} maxLength={500}
-        placeholder="What was the side quest tonight?"
+        placeholder={forceQuest ? "Describe the sidequest invite — what, where, vibe…" : "What was the side quest tonight?"}
         className="w-full bg-transparent resize-none outline-none placeholder:text-muted-foreground"
         rows={2}
       />
@@ -349,12 +349,19 @@ function ComposePost({ onPosted, forceQuest = false }: { onPosted: () => void; f
       )}
 
       <div className="mt-3 pt-3 border-t border-border">
-        <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-          <input type="checkbox" checked={isQuest} onChange={(e) => setIsQuest(e.target.checked)}
-            className="size-4 rounded border-border accent-primary" />
-          <Trophy className="size-4 text-primary" />
-          <span className="font-semibold">Post as a sidequest others can join</span>
-        </label>
+        {forceQuest ? (
+          <div className="flex items-center gap-2 text-sm">
+            <Trophy className="size-4 text-primary" />
+            <span className="font-semibold">Sidequest invite — others can join</span>
+          </div>
+        ) : (
+          <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+            <input type="checkbox" checked={isQuest} onChange={(e) => setIsQuest(e.target.checked)}
+              className="size-4 rounded border-border accent-primary" />
+            <Trophy className="size-4 text-primary" />
+            <span className="font-semibold">Post as a sidequest others can join</span>
+          </label>
+        )}
 
         {isQuest && (
           <div className="mt-3 space-y-3 rounded-xl bg-input/20 border border-border p-3">
