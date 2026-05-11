@@ -1,5 +1,7 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { Route as FeedRoute } from "./feed";
 
 export const Route = createFileRoute("/quests")({
-  beforeLoad: () => { throw redirect({ to: "/feed" }); },
+  head: () => ({ meta: [{ title: "Sidequests — SideQuest" }, { name: "description", content: "Browse joinable sidequests near you." }] }),
+  component: FeedRoute.options.component,
 });

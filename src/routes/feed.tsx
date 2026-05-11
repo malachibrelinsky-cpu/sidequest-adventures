@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useLocation } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -80,9 +80,11 @@ function haversineKm(aLat: number, aLon: number, bLat: number, bLon: number): nu
 function FeedPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isQuestsRoute = location.pathname.startsWith("/quests");
   const [posts, setPosts] = useState<PostWithCoords[]>([]);
   const [fetching, setFetching] = useState(true);
-  const [tab, setTab] = useState<Tab>("all");
+  const [tab, setTab] = useState<Tab>(isQuestsRoute ? "quests" : "updates");
   const [userLoc, setUserLoc] = useState<{ lat: number; lon: number } | null>(null);
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
