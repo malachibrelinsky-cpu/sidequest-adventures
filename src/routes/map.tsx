@@ -118,21 +118,44 @@ function MapPage() {
           <div>
             <p className="text-primary font-semibold text-sm mb-2">LIVE MAP</p>
             <h1 className="text-4xl md:text-5xl font-bold">Questers worldwide</h1>
-            <p className="text-muted-foreground mt-2">Real GPS, real cities. Tap a pin to start a chat.</p>
+            <p className="text-muted-foreground mt-2">Real GPS, real cities. Tap a pin to start a chat or join a quest.</p>
           </div>
           <LocationControls onGPS={useGPS} onCity={searchCity} saving={savingLoc} />
         </div>
 
         <div className="grid lg:grid-cols-[1fr_320px] gap-5">
           <div className="bento-card relative aspect-[4/3] lg:aspect-auto lg:min-h-[600px] overflow-hidden p-0">
-            <LeafletMap me={me} members={members} onSelect={setSelected} />
+            <LeafletMap me={me} members={members} quests={quests} onSelect={(m) => { setSelected(m); setSelectedQuest(null); }} onSelectQuest={(q) => { setSelectedQuest(q); setSelected(null); }} />
           </div>
 
           <aside className="bento-card p-5 space-y-4">
             <div className="flex items-center gap-2 text-sm text-primary font-semibold">
-              <Sparkles className="size-4" /> {members.length} questers on the map
+              <Sparkles className="size-4" /> {members.length} questers · {quests.length} active quests
             </div>
-            {selected ? (
+            {selectedQuest ? (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Trophy className="size-4 text-primary" />
+                  <p className="text-xs uppercase tracking-wide text-primary font-bold">{selectedQuest.difficulty} · {selectedQuest.points} pts</p>
+                </div>
+                <p className="font-bold mb-2 line-clamp-3">{selectedQuest.caption || "Sidequest"}</p>
+                {selectedQuest.location && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1"><MapPin className="size-3" />{selectedQuest.location}</p>
+                )}
+                {selectedQuest.quest_time && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1"><Clock className="size-3" />{new Date(selectedQuest.quest_time).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</p>
+                )}
+                {selectedQuest.participants_needed != null && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mb-3"><Users className="size-3" />Needs {selectedQuest.participants_needed}</p>
+                )}
+                {selectedQuest.profiles && (
+                  <p className="text-xs text-muted-foreground mb-3">Hosted by {selectedQuest.profiles.display_name}</p>
+                )}
+                <Link to="/feed" className="w-full rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground py-2.5 font-semibold text-sm hover:opacity-90 transition flex items-center justify-center gap-2">
+                  View in feed
+                </Link>
+              </div>
+            ) : selected ? (
               <div>
                 <div className="flex items-center gap-3 mb-3">
                   <div className="size-14 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground font-bold overflow-hidden">
@@ -155,19 +178,41 @@ function MapPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {members.length === 0 && <p className="text-sm text-muted-foreground">No one's on the map yet — set your location or invite a friend.</p>}
-                {members.slice(0, 8).map((m) => (
-                  <button key={m.id} onClick={() => setSelected(m)}
-                    className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/40 transition text-left">
-                    <div className="size-9 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground text-sm font-bold overflow-hidden">
-                      {m.avatar_url ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover"/> : m.display_name[0]?.toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate">{m.display_name}</p>
-                      {m.city && <p className="text-xs text-muted-foreground truncate">{m.city}</p>}
-                    </div>
-                  </button>
-                ))}
+                {quests.length > 0 && (
+                  <>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold pt-1">Active quests</p>
+                    {quests.slice(0, 5).map((q) => (
+                      <button key={q.id} onClick={() => setSelectedQuest(q)}
+                        className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/40 transition text-left">
+                        <div className="size-9 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground">
+                          <Trophy className="size-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate">{q.caption || "Sidequest"}</p>
+                          {q.location && <p className="text-xs text-muted-foreground truncate">{q.location} · {q.points} pts</p>}
+                        </div>
+                      </button>
+                    ))}
+                  </>
+                )}
+                {members.length === 0 && quests.length === 0 && <p className="text-sm text-muted-foreground">No one's on the map yet — set your location or invite a friend.</p>}
+                {members.length > 0 && (
+                  <>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold pt-3">Questers</p>
+                    {members.slice(0, 6).map((m) => (
+                      <button key={m.id} onClick={() => setSelected(m)}
+                        className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/40 transition text-left">
+                        <div className="size-9 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground text-sm font-bold overflow-hidden">
+                          {m.avatar_url ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover"/> : m.display_name[0]?.toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate">{m.display_name}</p>
+                          {m.city && <p className="text-xs text-muted-foreground truncate">{m.city}</p>}
+                        </div>
+                      </button>
+                    ))}
+                  </>
+                )}
               </div>
             )}
           </aside>
