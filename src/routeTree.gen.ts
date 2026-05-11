@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as QuestsRouteImport } from './routes/quests'
 import { Route as QuanRouteImport } from './routes/quan'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ModerationRouteImport } from './routes/moderation'
 import { Route as MapRouteImport } from './routes/map'
@@ -39,6 +40,11 @@ const QuanRoute = QuanRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PricingRoute = PricingRouteImport.update({
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/map': typeof MapRoute
   '/moderation': typeof ModerationRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByTo {
   '/map': typeof MapRoute
   '/moderation': typeof ModerationRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
@@ -154,6 +162,7 @@ export interface FileRoutesById {
   '/map': typeof MapRoute
   '/moderation': typeof ModerationRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
@@ -174,6 +183,7 @@ export interface FileRouteTypes {
     | '/map'
     | '/moderation'
     | '/pricing'
+    | '/privacy'
     | '/profile'
     | '/quan'
     | '/quests'
@@ -192,6 +202,7 @@ export interface FileRouteTypes {
     | '/map'
     | '/moderation'
     | '/pricing'
+    | '/privacy'
     | '/profile'
     | '/quan'
     | '/quests'
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/map'
     | '/moderation'
     | '/pricing'
+    | '/privacy'
     | '/profile'
     | '/quan'
     | '/quests'
@@ -229,6 +241,7 @@ export interface RootRouteChildren {
   MapRoute: typeof MapRoute
   ModerationRoute: typeof ModerationRoute
   PricingRoute: typeof PricingRoute
+  PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
   QuanRoute: typeof QuanRoute
   QuestsRoute: typeof QuestsRoute
@@ -259,6 +272,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pricing': {
@@ -365,6 +385,7 @@ const rootRouteChildren: RootRouteChildren = {
   MapRoute: MapRoute,
   ModerationRoute: ModerationRoute,
   PricingRoute: PricingRoute,
+  PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
   QuanRoute: QuanRoute,
   QuestsRoute: QuestsRoute,
@@ -376,3 +397,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
