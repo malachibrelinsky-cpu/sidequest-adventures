@@ -918,3 +918,119 @@ function CropModal({ file, rotation, onCancel, onApply }: {
     </div>
   );
 }
+
+function ComposeQuest({ onPosted }: { onPosted: () => void }) {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [activity, setActivity] = useState("");
+  const [location, setLocation] = useState("");
+  const [difficulty, setDifficulty] = useState<Difficulty>("common");
+  const [participants, setParticipants] = useState<number>(2);
+  const [questTime, setQuestTime] = useState<string>("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const reset = () => {
+    setActivity(""); setLocation(""); setDifficulty("common"); setParticipants(2); setQuestTime("");
+  };
+
+  const submit = async () => {
+    if (!user) return;
+    const title = activity.trim();
+    if (title.length < 3) { toast.error("Describe the activity (3+ chars)"); return; }
+    if (title.length > 150) { toast.error("Keep it under 150 chars"); return; }
+    if (participants < 1 || participants > 50) { toast.error("Players must be 1–50"); return; }
+    setSubmitting(true);
+    const { error } = await supabase.from("posts").insert({
+      user_id: user.id,
+      caption: title,
+      location: location.trim() || null,
+      difficulty,
+      points: DIFFICULTY_DEFAULTS[difficulty],
+      participants_needed: participants,
+      quest_time: questTime ? new Date(questTime).toISOString() : null,
+      image_urls: [],
+    });
+    setSubmitting(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Quest posted!");
+    reset();
+    setOpen(false);
+    onPosted();
+  };
+
+  if (!open) {
+    return (
+      <div className="mb-5">
+        <button
+          onClick={() => setOpen(true)}
+          className="w-full rounded-2xl border border-dashed border-primary/40 bg-card/40 hover:bg-card/60 hover:border-primary transition px-4 py-4 inline-flex items-center justify-center gap-2 text-sm font-semibold text-primary"
+        >
+          <Sparkles className="size-4" /> Post a new sidequest
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-5 rounded-2xl border border-border bg-card/60 backdrop-blur p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-bold inline-flex items-center gap-2"><Sparkles className="size-4 text-primary" /> New sidequest</h3>
+        <button onClick={() => { reset(); setOpen(false); }} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
+      </div>
+
+      <div>
+        <label className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 block">Activity</label>
+        <input
+          value={activity}
+          onChange={(e) => setActivity(e.target.value)}
+          placeholder="e.g. Sunset hike at Bernal Heights"
+          maxLength={150}
+          className="w-full rounded-xl bg-background border border-border px-3 py-2 text-sm outline-none focus:border-primary"
+        />
+      </div>
+
+      <div>
+        <label className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 block">Tier</label>
+        <div className="flex flex-wrap gap-2">
+          {DIFFICULTIES.map((d) => {
+            const active = difficulty === d;
+            return (
+              <button key={d} type="button" onClick={() => setDifficulty(d)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold capitalize transition ${active ? DIFFICULTY_STYLE[d] : "border-border text-muted-foreground hover:border-primary/50"}`}>
+                {d} · {DIFFICULTY_DEFAULTS[d]} pts
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 block inline-flex items-center gap-1"><Users className="size-3" /> Players needed</label>
+          <input type="number" min={1} max={50} value={participants}
+            onChange={(e) => setParticipants(Math.max(1, Math.min(50, Number(e.target.value) || 1)))}
+            className="w-full rounded-xl bg-background border border-border px-3 py-2 text-sm outline-none focus:border-primary" />
+        </div>
+        <div>
+          <label className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 block inline-flex items-center gap-1"><Clock className="size-3" /> When (optional)</label>
+          <input type="datetime-local" value={questTime}
+            onChange={(e) => setQuestTime(e.target.value)}
+            className="w-full rounded-xl bg-background border border-border px-3 py-2 text-sm outline-none focus:border-primary" />
+        </div>
+      </div>
+
+      <div>
+        <label className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 block inline-flex items-center gap-1"><MapPin className="size-3" /> Location (optional)</label>
+        <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Mission District, SF"
+          className="w-full rounded-xl bg-background border border-border px-3 py-2 text-sm outline-none focus:border-primary" />
+      </div>
+
+      <div className="flex justify-end gap-2 pt-1">
+        <button onClick={() => { reset(); setOpen(false); }} className="rounded-full px-4 py-2 text-sm font-semibold bg-muted hover:bg-muted/70 transition">Cancel</button>
+        <button onClick={submit} disabled={submitting} className="rounded-full px-5 py-2 text-sm font-semibold bg-gradient-to-r from-primary to-accent text-primary-foreground disabled:opacity-50 hover:opacity-90 transition inline-flex items-center gap-2">
+          <Send className="size-3.5" /> {submitting ? "Posting…" : "Post quest"}
+        </button>
+      </div>
+    </div>
+  );
+}
