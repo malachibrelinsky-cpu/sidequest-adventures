@@ -219,7 +219,7 @@ export function FeedPage() {
           </div>
         </div>
 
-        {isQuestsRoute && <ComposeQuest onPosted={load} />}
+        {isQuestsRoute ? <ComposeQuest onPosted={load} /> : <ComposeUpdate onPosted={load} />}
 
         {isQuestsRoute ? (
           <div className="mt-8 mb-5 space-y-3">
