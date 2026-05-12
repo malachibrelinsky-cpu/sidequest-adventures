@@ -45,6 +45,7 @@ export function SiteFooter() {
           <Link to="/how-it-works" className="hover:text-foreground">How it works</Link>
           <Link to="/feed" className="hover:text-foreground">Feed</Link>
           <Link to="/privacy" className="hover:text-foreground">Privacy</Link>
+          <Link to="/terms" className="hover:text-foreground">Terms</Link>
         </div>
       </div>
     </footer>
