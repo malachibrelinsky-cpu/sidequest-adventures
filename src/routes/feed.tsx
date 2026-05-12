@@ -961,10 +961,11 @@ function ComposeQuest({ onPosted }: { onPosted: () => void }) {
   const [difficulty, setDifficulty] = useState<Difficulty>("common");
   const [participants, setParticipants] = useState<number>(2);
   const [questTime, setQuestTime] = useState<string>("");
+  const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const reset = () => {
-    setActivity(""); setLocation(""); setDifficulty("common"); setParticipants(2); setQuestTime("");
+    setActivity(""); setLocation(""); setDifficulty("common"); setParticipants(2); setQuestTime(""); setNotes("");
   };
 
   const submit = async () => {
