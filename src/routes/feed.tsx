@@ -380,14 +380,14 @@ function QuestsMiniMap({ quests, userLoc, onSelect }: {
       }
 
       quests.forEach((q) => {
-        if (q.latitude == null || q.longitude == null) return;
+        if (q.lat_approx == null || q.lon_approx == null) return;
         const html = `<div style="position:relative;width:40px;height:50px;filter:drop-shadow(0 2px 8px rgba(255,180,60,.6))"><div style="position:absolute;top:0;left:0;width:40px;height:40px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:linear-gradient(135deg,#fbbf24,#f97316);border:2px solid #0d1b2a"></div><div style="position:absolute;top:7px;left:7px;width:26px;height:26px;border-radius:9999px;background:#0d1b2a;display:grid;place-items:center;color:#fbbf24;font-weight:800;font-size:10px">${q.points ?? "★"}</div></div>`;
         const icon = L.divIcon({ html, className: "", iconSize: [40, 50], iconAnchor: [20, 46] });
-        L.marker([q.latitude, q.longitude], { icon })
+        L.marker([q.lat_approx, q.lon_approx], { icon })
           .bindTooltip(escapeHtml(q.caption || "Sidequest"), { direction: "top" })
           .on("click", () => onSelect(q.id))
           .addTo(layerRef.current);
-        pts.push([q.latitude, q.longitude]);
+        pts.push([q.lat_approx, q.lon_approx]);
       });
 
       if (pts.length > 1) {
