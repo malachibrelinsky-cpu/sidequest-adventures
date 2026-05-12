@@ -29,7 +29,7 @@ const DIFFICULTY_STYLE: Record<string, string> = {
 
 type Profile = { id: string; display_name: string; avatar_url: string | null };
 type Comment = { id: string; body: string; created_at: string; user_id: string; profiles: Profile | null };
-type Post = { id: string; caption: string | null; image_urls: string[]; created_at: string; user_id: string; difficulty: Difficulty | null; points: number | null; participants_needed: number | null; quest_time: string | null; location: string | null; completed_at: string | null; evidence_urls: string[]; profiles: Profile | null; comments: Comment[]; quest_participants: { user_id: string }[] };
+type Post = { id: string; caption: string | null; notes: string | null; image_urls: string[]; created_at: string; user_id: string; difficulty: Difficulty | null; points: number | null; participants_needed: number | null; quest_time: string | null; location: string | null; completed_at: string | null; evidence_urls: string[]; profiles: Profile | null; comments: Comment[]; quest_participants: { user_id: string }[] };
 
 const captionSchema = z.string().trim().max(150);
 const commentSchema = z.string().trim().min(1).max(1000);
@@ -104,7 +104,7 @@ export function FeedPage() {
   const load = async () => {
     const { data, error } = await supabase
       .from("posts")
-      .select("id, caption, image_urls, created_at, user_id, difficulty, points, participants_needed, quest_time, location, completed_at, evidence_urls, latitude, longitude, profiles!posts_user_id_fkey(id, display_name, avatar_url), comments(id, body, created_at, user_id, profiles!comments_user_id_fkey(id, display_name, avatar_url)), quest_participants(user_id)")
+      .select("id, caption, notes, image_urls, created_at, user_id, difficulty, points, participants_needed, quest_time, location, completed_at, evidence_urls, latitude, longitude, profiles!posts_user_id_fkey(id, display_name, avatar_url), comments(id, body, created_at, user_id, profiles!comments_user_id_fkey(id, display_name, avatar_url)), quest_participants(user_id)")
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) { toast.error(error.message); return; }
@@ -628,7 +628,10 @@ function PostCard({ post, onChange, currentUserId, distanceKm }: { post: Post; o
           </div>
         </div>
       ) : (
-        post.caption && <p className="px-4 pt-4 text-sm">{post.caption}</p>
+        <>
+          {post.caption && <p className="px-4 pt-4 text-sm">{post.caption}</p>}
+          {post.notes && <p className="px-4 pt-2 text-sm text-muted-foreground whitespace-pre-wrap">{post.notes}</p>}
+        </>
       )}
       <div className="px-4 py-3 mt-1 flex items-center gap-2 text-sm border-t border-border/60">
         <button className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-muted/40 hover:bg-rose-500/15 hover:text-rose-400 text-muted-foreground font-medium transition">
@@ -961,10 +964,11 @@ function ComposeQuest({ onPosted }: { onPosted: () => void }) {
   const [difficulty, setDifficulty] = useState<Difficulty>("common");
   const [participants, setParticipants] = useState<number>(2);
   const [questTime, setQuestTime] = useState<string>("");
+  const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const reset = () => {
-    setActivity(""); setLocation(""); setDifficulty("common"); setParticipants(2); setQuestTime("");
+    setActivity(""); setLocation(""); setDifficulty("common"); setParticipants(2); setQuestTime(""); setNotes("");
   };
 
   const submit = async () => {
@@ -973,6 +977,8 @@ function ComposeQuest({ onPosted }: { onPosted: () => void }) {
     if (title.length < 3) { toast.error("Describe the activity (3+ chars)"); return; }
     if (title.length > 150) { toast.error("Keep it under 150 chars"); return; }
     if (participants < 1 || participants > 50) { toast.error("Players must be 1–50"); return; }
+    const trimmedNotes = notes.trim();
+    if (trimmedNotes.length > 1000) { toast.error("Comments must be under 1000 chars"); return; }
     setSubmitting(true);
     const { error } = await supabase.from("posts").insert({
       user_id: user.id,
@@ -982,6 +988,7 @@ function ComposeQuest({ onPosted }: { onPosted: () => void }) {
       points: DIFFICULTY_DEFAULTS[difficulty],
       participants_needed: participants,
       quest_time: questTime ? new Date(questTime).toISOString() : null,
+      notes: trimmedNotes || null,
       image_urls: [],
     });
     setSubmitting(false);
@@ -1057,6 +1064,13 @@ function ComposeQuest({ onPosted }: { onPosted: () => void }) {
         <label className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 block inline-flex items-center gap-1"><MapPin className="size-3" /> Location (optional)</label>
         <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Mission District, SF"
           className="w-full rounded-xl bg-background border border-border px-3 py-2 text-sm outline-none focus:border-primary" />
+      </div>
+
+      <div>
+        <label className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 block">Comments (optional)</label>
+        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Extra details, requirements, vibes…"
+          maxLength={1000} rows={3}
+          className="w-full rounded-xl bg-background border border-border px-3 py-2 text-sm outline-none focus:border-primary resize-y" />
       </div>
 
       <div className="flex justify-end gap-2 pt-1">
