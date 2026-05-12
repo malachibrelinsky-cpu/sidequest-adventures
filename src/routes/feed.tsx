@@ -412,7 +412,6 @@ function QuestsMiniMap({ quests, userLoc, onSelect }: {
 
 function PostCard({ post, onChange, currentUserId, distanceKm }: { post: Post; onChange: () => void; currentUserId: string; distanceKm?: number | null }) {
   const navigate = useNavigate();
-  const { isPremium } = usePremium();
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [posting, setPosting] = useState(false);
