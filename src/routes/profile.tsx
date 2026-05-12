@@ -64,15 +64,23 @@ function ProfilePage() {
     else toast.success("Saved!");
   };
 
-  const uploadAvatar = async (file: File) => {
+  const [editorSrc, setEditorSrc] = useState<string | null>(null);
+
+  const onPickFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => setEditorSrc(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const uploadAvatarBlob = async (blob: Blob) => {
     if (!user) return;
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `${user.id}/avatar-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("avatars").upload(path, file, { contentType: file.type, upsert: true });
+    const path = `${user.id}/avatar-${Date.now()}.jpg`;
+    const { error } = await supabase.storage.from("avatars").upload(path, blob, { contentType: "image/jpeg", upsert: true });
     if (error) { toast.error(error.message); return; }
     const { data } = supabase.storage.from("avatars").getPublicUrl(path);
     await supabase.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", user.id);
-    setAvatarUrl(data.publicUrl);
+    setAvatarUrl(`${data.publicUrl}?t=${Date.now()}`);
+    setEditorSrc(null);
     toast.success("Avatar updated");
   };
 
@@ -90,7 +98,7 @@ function ProfilePage() {
             </div>
             <label className="text-sm text-primary cursor-pointer hover:underline">
               Change avatar
-              <input type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && uploadAvatar(e.target.files[0])} />
+              <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onPickFile(f); e.target.value = ""; }} />
             </label>
           </div>
 
