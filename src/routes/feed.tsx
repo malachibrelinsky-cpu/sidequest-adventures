@@ -1070,7 +1070,7 @@ function ComposeQuest({ onPosted }: { onPosted: () => void }) {
           className="w-full rounded-xl bg-background border border-border px-3 py-2 text-sm outline-none focus:border-primary resize-y" />
       </div>
 
-      <div className="flex justify-end gap-2 pt-1"></div>
+      <div className="flex justify-end gap-2 pt-1">
         <button onClick={() => { reset(); setOpen(false); }} className="rounded-full px-4 py-2 text-sm font-semibold bg-muted hover:bg-muted/70 transition">Cancel</button>
         <button onClick={submit} disabled={submitting} className="rounded-full px-5 py-2 text-sm font-semibold bg-gradient-to-r from-primary to-accent text-primary-foreground disabled:opacity-50 hover:opacity-90 transition inline-flex items-center gap-2">
           <Send className="size-3.5" /> {submitting ? "Posting…" : "Post quest"}
