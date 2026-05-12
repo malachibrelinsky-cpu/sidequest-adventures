@@ -628,7 +628,10 @@ function PostCard({ post, onChange, currentUserId, distanceKm }: { post: Post; o
           </div>
         </div>
       ) : (
-        post.caption && <p className="px-4 pt-4 text-sm">{post.caption}</p>
+        <>
+          {post.caption && <p className="px-4 pt-4 text-sm">{post.caption}</p>}
+          {post.notes && <p className="px-4 pt-2 text-sm text-muted-foreground whitespace-pre-wrap">{post.notes}</p>}
+        </>
       )}
       <div className="px-4 py-3 mt-1 flex items-center gap-2 text-sm border-t border-border/60">
         <button className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-muted/40 hover:bg-rose-500/15 hover:text-rose-400 text-muted-foreground font-medium transition">
