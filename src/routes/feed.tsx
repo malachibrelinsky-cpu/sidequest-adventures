@@ -122,8 +122,6 @@ export function FeedPage() {
     })();
   }, [user]);
 
-  if (loading || !user) return <div className="min-h-screen grid place-items-center text-muted-foreground">Loading…</div>;
-
   const withDist = posts.map((p) => {
     const d = userLoc && p.latitude != null && p.longitude != null
       ? haversineKm(userLoc.lat, userLoc.lon, p.latitude, p.longitude) : null;
