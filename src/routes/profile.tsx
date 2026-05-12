@@ -64,15 +64,23 @@ function ProfilePage() {
     else toast.success("Saved!");
   };
 
-  const uploadAvatar = async (file: File) => {
+  const [editorSrc, setEditorSrc] = useState<string | null>(null);
+
+  const onPickFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => setEditorSrc(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const uploadAvatarBlob = async (blob: Blob) => {
     if (!user) return;
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `${user.id}/avatar-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("avatars").upload(path, file, { contentType: file.type, upsert: true });
+    const path = `${user.id}/avatar-${Date.now()}.jpg`;
+    const { error } = await supabase.storage.from("avatars").upload(path, blob, { contentType: "image/jpeg", upsert: true });
     if (error) { toast.error(error.message); return; }
     const { data } = supabase.storage.from("avatars").getPublicUrl(path);
     await supabase.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", user.id);
-    setAvatarUrl(data.publicUrl);
+    setAvatarUrl(`${data.publicUrl}?t=${Date.now()}`);
+    setEditorSrc(null);
     toast.success("Avatar updated");
   };
 
@@ -90,7 +98,7 @@ function ProfilePage() {
             </div>
             <label className="text-sm text-primary cursor-pointer hover:underline">
               Change avatar
-              <input type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && uploadAvatar(e.target.files[0])} />
+              <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onPickFile(f); e.target.value = ""; }} />
             </label>
           </div>
 
@@ -141,6 +149,134 @@ function ProfilePage() {
         <BadgesPanel userId={user.id} />
       </main>
       <SiteFooter />
+      {editorSrc && (
+        <AvatarEditor
+          src={editorSrc}
+          onCancel={() => setEditorSrc(null)}
+          onSave={uploadAvatarBlob}
+        />
+      )}
+    </div>
+  );
+}
+
+function AvatarEditor({ src, onCancel, onSave }: { src: string; onCancel: () => void; onSave: (blob: Blob) => void | Promise<void> }) {
+  const SIZE = 280;
+  const OUTPUT = 512;
+  const [img, setImg] = useState<HTMLImageElement | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [drag, setDrag] = useState<{ x: number; y: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const i = new Image();
+    i.crossOrigin = "anonymous";
+    i.onload = () => {
+      setImg(i);
+      const base = Math.max(SIZE / i.width, SIZE / i.height);
+      setZoom(base);
+      setOffset({ x: 0, y: 0 });
+    };
+    i.src = src;
+  }, [src]);
+
+  const drawSize = img ? { w: img.width * zoom, h: img.height * zoom } : { w: 0, h: 0 };
+
+  const clampOffset = (o: { x: number; y: number }) => {
+    const maxX = Math.max(0, (drawSize.w - SIZE) / 2);
+    const maxY = Math.max(0, (drawSize.h - SIZE) / 2);
+    return { x: Math.max(-maxX, Math.min(maxX, o.x)), y: Math.max(-maxY, Math.min(maxY, o.y)) };
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    setDrag({ x: e.clientX - offset.x, y: e.clientY - offset.y });
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!drag) return;
+    setOffset(clampOffset({ x: e.clientX - drag.x, y: e.clientY - drag.y }));
+  };
+  const onPointerUp = () => setDrag(null);
+
+  const handleSave = async () => {
+    if (!img) return;
+    setBusy(true);
+    const canvas = document.createElement("canvas");
+    canvas.width = OUTPUT;
+    canvas.height = OUTPUT;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) { setBusy(false); return; }
+    const scale = OUTPUT / SIZE;
+    const w = drawSize.w * scale;
+    const h = drawSize.h * scale;
+    const cx = OUTPUT / 2 + offset.x * scale;
+    const cy = OUTPUT / 2 + offset.y * scale;
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, OUTPUT, OUTPUT);
+    ctx.drawImage(img, cx - w / 2, cy - h / 2, w, h);
+    canvas.toBlob(async (blob) => {
+      if (blob) await onSave(blob);
+      setBusy(false);
+    }, "image/jpeg", 0.92);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 backdrop-blur-sm p-4">
+      <div className="bento-card p-6 w-full max-w-md space-y-4">
+        <h3 className="text-lg font-bold">Adjust your photo</h3>
+        <div
+          className="relative mx-auto overflow-hidden rounded-full bg-input/40 select-none touch-none"
+          style={{ width: SIZE, height: SIZE }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+        >
+          {img && (
+            <img
+              src={src}
+              alt=""
+              draggable={false}
+              className="absolute left-1/2 top-1/2 max-w-none pointer-events-none"
+              style={{
+                width: drawSize.w,
+                height: drawSize.h,
+                transform: `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px))`,
+              }}
+            />
+          )}
+        </div>
+        <div className="space-y-2">
+          <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide">Zoom</label>
+          <input
+            type="range"
+            min={0.5}
+            max={4}
+            step={0.01}
+            value={img ? zoom / Math.max(SIZE / img.width, SIZE / img.height) : 1}
+            onChange={(e) => {
+              if (!img) return;
+              const base = Math.max(SIZE / img.width, SIZE / img.height);
+              const nextZoom = base * parseFloat(e.target.value);
+              setZoom(nextZoom);
+              const newDraw = { w: img.width * nextZoom, h: img.height * nextZoom };
+              const maxX = Math.max(0, (newDraw.w - SIZE) / 2);
+              const maxY = Math.max(0, (newDraw.h - SIZE) / 2);
+              setOffset((o) => ({ x: Math.max(-maxX, Math.min(maxX, o.x)), y: Math.max(-maxY, Math.min(maxY, o.y)) }));
+            }}
+            className="w-full"
+          />
+          <p className="text-xs text-muted-foreground">Drag the photo to reposition.</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onCancel} className="flex-1 rounded-full border border-border py-2.5 font-semibold hover:bg-input/40 transition">Cancel</button>
+          <button onClick={handleSave} disabled={busy || !img}
+            className="flex-1 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground py-2.5 font-semibold disabled:opacity-50 hover:opacity-90 transition">
+            {busy ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
