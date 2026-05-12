@@ -124,8 +124,8 @@ export function FeedPage() {
   }, [user]);
 
   const withDist = posts.map((p) => {
-    const d = userLoc && p.latitude != null && p.longitude != null
-      ? haversineKm(userLoc.lat, userLoc.lon, p.latitude, p.longitude) : null;
+    const d = userLoc && p.lat_approx != null && p.lon_approx != null
+      ? haversineKm(userLoc.lat, userLoc.lon, p.lat_approx, p.lon_approx) : null;
     return { post: p, dist: d };
   });
 
