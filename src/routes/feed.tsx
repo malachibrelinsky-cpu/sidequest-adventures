@@ -412,7 +412,6 @@ function QuestsMiniMap({ quests, userLoc, onSelect }: {
 
 function PostCard({ post, onChange, currentUserId, distanceKm }: { post: Post; onChange: () => void; currentUserId: string; distanceKm?: number | null }) {
   const navigate = useNavigate();
-  const { isPremium } = usePremium();
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [posting, setPosting] = useState(false);
@@ -433,39 +432,8 @@ function PostCard({ post, onChange, currentUserId, distanceKm }: { post: Post; o
     if (joined) { navigate({ to: "/quest-chat/$questId", params: { questId: post.id } }); return; }
     if (full) { toast.error("This quest is full"); return; }
 
-    // Basic-plan weekly limits per difficulty (resets Sunday 12am local time)
-    const BASIC_WEEKLY_LIMITS: Record<Difficulty, number | null> = {
-      common: null, // unlimited
-      rare: 5,
-      epic: 2,
-      impossible: 0,
-    };
-    if (!isPremium && post.difficulty) {
-      const limit = BASIC_WEEKLY_LIMITS[post.difficulty];
-      if (limit === 0) {
-        toast.error(`${post.difficulty[0].toUpperCase() + post.difficulty.slice(1)} quests are Premium-only. Upgrade to accept.`);
-        return;
-      }
-      if (limit != null) {
-        const weekStart = new Date();
-        weekStart.setHours(0, 0, 0, 0);
-        weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Sunday 00:00 local
-        const { data: weekJoins, error: countErr } = await supabase
-          .from("quest_participants")
-          .select("post_id, joined_at, posts!inner(difficulty)")
-          .eq("user_id", currentUserId)
-          .eq("posts.difficulty", post.difficulty)
-          .gte("joined_at", weekStart.toISOString());
-        if (countErr) { toast.error(countErr.message); return; }
-        if ((weekJoins?.length ?? 0) >= limit) {
-          toast.error(`Basic plan limit reached: ${limit} ${post.difficulty} quest${limit === 1 ? "" : "s"}/week. Resets Sunday 12am.`);
-          return;
-        }
-      }
-    }
-
     setAccepting(true);
-    const { error } = await supabase.from("quest_participants").insert({ post_id: post.id, user_id: currentUserId });
+    const { error } = await supabase.rpc("join_quest", { p_post_id: post.id });
     setAccepting(false);
     if (error) { toast.error(error.message); return; }
     toast.success("You're in! Opening group chat…");
@@ -958,7 +926,6 @@ function CropModal({ file, rotation, onCancel, onApply }: {
 
 function ComposeQuest({ onPosted }: { onPosted: () => void }) {
   const { user } = useAuth();
-  const { isPremium } = usePremium();
   const [open, setOpen] = useState(false);
   const [activity, setActivity] = useState("");
   const [location, setLocation] = useState("");
@@ -981,47 +948,19 @@ function ComposeQuest({ onPosted }: { onPosted: () => void }) {
     const trimmedNotes = notes.trim();
     if (trimmedNotes.length > 1000) { toast.error("Comments must be under 1000 chars"); return; }
 
-    // Basic-plan weekly upload limits (resets Sunday 12am local time)
-    if (!isPremium) {
-      if (difficulty === "impossible") {
-        toast.error("Impossible quests are Premium-only. Upgrade to post one.");
-        return;
-      }
-      const weekStart = new Date();
-      weekStart.setHours(0, 0, 0, 0);
-      weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Sunday 00:00 local
-      const { data: weekPosts, error: countErr } = await supabase
-        .from("posts")
-        .select("id, difficulty")
-        .eq("user_id", user.id)
-        .gte("created_at", weekStart.toISOString());
-      if (countErr) { toast.error(countErr.message); return; }
-      const total = weekPosts?.length ?? 0;
-      if (total >= 5) {
-        toast.error("Basic plan limit reached: 5 quests/week. Resets Sunday 12am.");
-        return;
-      }
-      if (difficulty === "epic") {
-        const epicCount = (weekPosts ?? []).filter((p) => p.difficulty === "epic").length;
-        if (epicCount >= 1) {
-          toast.error("Basic plan limit reached: 1 Epic quest/week. Resets Sunday 12am.");
-          return;
-        }
-      }
-    }
-
     setSubmitting(true);
-    const { error } = await supabase.from("posts").insert({
-      user_id: user.id,
-      caption: title,
-      location: location.trim() || null,
-      difficulty,
-      points: DIFFICULTY_DEFAULTS[difficulty],
-      participants_needed: participants,
-      quest_time: questTime ? new Date(questTime).toISOString() : null,
-      notes: trimmedNotes || null,
-      image_urls: [],
-    });
+    const { error } = await supabase.rpc("post_quest", {
+      p_caption: title,
+      p_notes: trimmedNotes || null,
+      p_location: location.trim() || null,
+      p_difficulty: difficulty,
+      p_points: DIFFICULTY_DEFAULTS[difficulty],
+      p_participants_needed: participants,
+      p_quest_time: questTime ? new Date(questTime).toISOString() : null,
+      p_image_urls: [],
+      p_latitude: null,
+      p_longitude: null,
+    } as never);
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Quest posted!");

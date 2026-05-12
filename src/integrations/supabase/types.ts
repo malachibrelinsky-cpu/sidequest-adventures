@@ -505,6 +505,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_week_start_utc: { Args: never; Returns: string }
       get_my_location: {
         Args: never
         Returns: {
@@ -526,6 +527,23 @@ export type Database = {
       is_quest_participant: {
         Args: { _post: string; _user: string }
         Returns: boolean
+      }
+      is_user_premium: { Args: { _uid: string }; Returns: boolean }
+      join_quest: { Args: { p_post_id: string }; Returns: undefined }
+      post_quest: {
+        Args: {
+          p_caption: string
+          p_difficulty: string
+          p_image_urls: string[]
+          p_latitude: number
+          p_location: string
+          p_longitude: number
+          p_notes: string
+          p_participants_needed: number
+          p_points: number
+          p_quest_time: string
+        }
+        Returns: string
       }
       revive_streak: { Args: never; Returns: undefined }
     }
