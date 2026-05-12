@@ -974,6 +974,8 @@ function ComposeQuest({ onPosted }: { onPosted: () => void }) {
     if (title.length < 3) { toast.error("Describe the activity (3+ chars)"); return; }
     if (title.length > 150) { toast.error("Keep it under 150 chars"); return; }
     if (participants < 1 || participants > 50) { toast.error("Players must be 1–50"); return; }
+    const trimmedNotes = notes.trim();
+    if (trimmedNotes.length > 1000) { toast.error("Comments must be under 1000 chars"); return; }
     setSubmitting(true);
     const { error } = await supabase.from("posts").insert({
       user_id: user.id,
@@ -983,6 +985,7 @@ function ComposeQuest({ onPosted }: { onPosted: () => void }) {
       points: DIFFICULTY_DEFAULTS[difficulty],
       participants_needed: participants,
       quest_time: questTime ? new Date(questTime).toISOString() : null,
+      notes: trimmedNotes || null,
       image_urls: [],
     });
     setSubmitting(false);
