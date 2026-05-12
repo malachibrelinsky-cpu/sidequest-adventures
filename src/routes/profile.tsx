@@ -32,7 +32,7 @@ function ProfilePage() {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("*").eq("id", user.id).single().then(({ data }) => {
+    supabase.from("profiles").select("display_name,bio,city,interests,avatar_url,map_color").eq("id", user.id).maybeSingle().then(({ data }) => {
       if (data) {
         setForm({
           display_name: data.display_name ?? "",
