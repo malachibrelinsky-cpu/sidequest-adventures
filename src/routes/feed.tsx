@@ -412,6 +412,7 @@ function QuestsMiniMap({ quests, userLoc, onSelect }: {
 
 function PostCard({ post, onChange, currentUserId, distanceKm }: { post: Post; onChange: () => void; currentUserId: string; distanceKm?: number | null }) {
   const navigate = useNavigate();
+  const { isPremium } = usePremium();
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [posting, setPosting] = useState(false);
@@ -431,6 +432,38 @@ function PostCard({ post, onChange, currentUserId, distanceKm }: { post: Post; o
   const acceptQuest = async () => {
     if (joined) { navigate({ to: "/quest-chat/$questId", params: { questId: post.id } }); return; }
     if (full) { toast.error("This quest is full"); return; }
+
+    // Basic-plan weekly limits per difficulty (resets Sunday 12am local time)
+    const BASIC_WEEKLY_LIMITS: Record<Difficulty, number | null> = {
+      common: null, // unlimited
+      rare: 5,
+      epic: 2,
+      impossible: 0,
+    };
+    if (!isPremium && post.difficulty) {
+      const limit = BASIC_WEEKLY_LIMITS[post.difficulty];
+      if (limit === 0) {
+        toast.error(`${post.difficulty[0].toUpperCase() + post.difficulty.slice(1)} quests are Premium-only. Upgrade to accept.`);
+        return;
+      }
+      if (limit != null) {
+        const weekStart = new Date();
+        weekStart.setHours(0, 0, 0, 0);
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Sunday 00:00 local
+        const { data: weekJoins, error: countErr } = await supabase
+          .from("quest_participants")
+          .select("post_id, joined_at, posts!inner(difficulty)")
+          .eq("user_id", currentUserId)
+          .eq("posts.difficulty", post.difficulty)
+          .gte("joined_at", weekStart.toISOString());
+        if (countErr) { toast.error(countErr.message); return; }
+        if ((weekJoins?.length ?? 0) >= limit) {
+          toast.error(`Basic plan limit reached: ${limit} ${post.difficulty} quest${limit === 1 ? "" : "s"}/week. Resets Sunday 12am.`);
+          return;
+        }
+      }
+    }
+
     setAccepting(true);
     const { error } = await supabase.from("quest_participants").insert({ post_id: post.id, user_id: currentUserId });
     setAccepting(false);
