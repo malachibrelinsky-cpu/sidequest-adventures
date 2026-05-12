@@ -92,6 +92,24 @@ function QuestChatPage() {
     if (error) { toast.error(error.message); setText(body); }
   };
 
+  const onPickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !user || uploading) return;
+    setUploading(true);
+    try {
+      const url = await uploadChatMedia(file, user.id);
+      const { error } = await supabase.from("quest_messages").insert({
+        post_id: questId, user_id: user.id, body: url,
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      toast.error(err?.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (loading || !user) return <div className="min-h-screen grid place-items-center text-muted-foreground">Loading…</div>;
 
   return (
