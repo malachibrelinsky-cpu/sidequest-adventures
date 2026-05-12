@@ -960,7 +960,7 @@ function ComposeQuest({ onPosted }: { onPosted: () => void }) {
       p_image_urls: [],
       p_latitude: null,
       p_longitude: null,
-    });
+    } as never);
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Quest posted!");
