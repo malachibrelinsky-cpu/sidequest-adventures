@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
-import { Send, ArrowLeft } from "lucide-react";
+import { Send, ArrowLeft, Paperclip } from "lucide-react";
+import { uploadChatMedia, detectChatMedia } from "@/lib/chat-media";
 
 export const Route = createFileRoute("/messages/$userId")({
   head: () => ({ meta: [{ title: "Chat — SideQuest" }] }),
