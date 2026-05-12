@@ -58,12 +58,14 @@ function MapPage() {
 
     const { data: qData } = await supabase
       .from("posts")
-      .select("id, caption, location, difficulty, points, participants_needed, quest_time, latitude, longitude, profiles!posts_user_id_fkey(display_name, avatar_url)")
+      .select("id, caption, location, difficulty, points, participants_needed, quest_time, lat_approx, lon_approx, profiles!posts_user_id_fkey(display_name, avatar_url)")
       .not("difficulty", "is", null)
-      .not("latitude", "is", null)
+      .not("lat_approx", "is", null)
       .is("completed_at", null)
       .order("created_at", { ascending: false });
-    setQuests((qData ?? []) as unknown as Quest[]);
+    setQuests(((qData ?? []) as unknown as Array<Omit<Quest, "latitude" | "longitude"> & { lat_approx: number; lon_approx: number }>).map((q) => ({
+      ...q, latitude: q.lat_approx, longitude: q.lon_approx,
+    })) as Quest[]);
   };
   useEffect(() => { if (user) load(); }, [user]);
 

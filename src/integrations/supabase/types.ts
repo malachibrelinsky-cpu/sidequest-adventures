@@ -136,8 +136,10 @@ export type Database = {
           evidence_urls: string[]
           id: string
           image_urls: string[]
+          lat_approx: number | null
           latitude: number | null
           location: string | null
+          lon_approx: number | null
           longitude: number | null
           notes: string | null
           participants_needed: number | null
@@ -153,8 +155,10 @@ export type Database = {
           evidence_urls?: string[]
           id?: string
           image_urls?: string[]
+          lat_approx?: number | null
           latitude?: number | null
           location?: string | null
+          lon_approx?: number | null
           longitude?: number | null
           notes?: string | null
           participants_needed?: number | null
@@ -170,8 +174,10 @@ export type Database = {
           evidence_urls?: string[]
           id?: string
           image_urls?: string[]
+          lat_approx?: number | null
           latitude?: number | null
           location?: string | null
+          lon_approx?: number | null
           longitude?: number | null
           notes?: string | null
           participants_needed?: number | null
@@ -508,6 +514,13 @@ export type Database = {
       current_week_start_utc: { Args: never; Returns: string }
       get_my_location: {
         Args: never
+        Returns: {
+          latitude: number
+          longitude: number
+        }[]
+      }
+      get_my_post_location: {
+        Args: { p_post_id: string }
         Returns: {
           latitude: number
           longitude: number

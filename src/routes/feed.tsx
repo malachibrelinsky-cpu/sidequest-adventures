@@ -71,7 +71,7 @@ async function rotateImageFile(file: File, degrees: number): Promise<File> {
 
 type Tab = "all" | "quests" | "updates";
 
-type PostWithCoords = Post & { latitude: number | null; longitude: number | null };
+type PostWithCoords = Post & { lat_approx: number | null; lon_approx: number | null; latitude?: number | null; longitude?: number | null };
 
 function haversineKm(aLat: number, aLon: number, bLat: number, bLon: number): number {
   const R = 6371;
@@ -104,7 +104,7 @@ export function FeedPage() {
   const load = async () => {
     const { data, error } = await supabase
       .from("posts")
-      .select("id, caption, notes, image_urls, created_at, user_id, difficulty, points, participants_needed, quest_time, location, completed_at, evidence_urls, latitude, longitude, profiles!posts_user_id_fkey(id, display_name, avatar_url), comments(id, body, created_at, user_id, profiles!comments_user_id_fkey(id, display_name, avatar_url)), quest_participants(user_id)")
+      .select("id, caption, notes, image_urls, created_at, user_id, difficulty, points, participants_needed, quest_time, location, completed_at, evidence_urls, lat_approx, lon_approx, profiles!posts_user_id_fkey(id, display_name, avatar_url), comments(id, body, created_at, user_id, profiles!comments_user_id_fkey(id, display_name, avatar_url)), quest_participants(user_id)")
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) { toast.error(error.message); return; }
@@ -124,8 +124,8 @@ export function FeedPage() {
   }, [user]);
 
   const withDist = posts.map((p) => {
-    const d = userLoc && p.latitude != null && p.longitude != null
-      ? haversineKm(userLoc.lat, userLoc.lon, p.latitude, p.longitude) : null;
+    const d = userLoc && p.lat_approx != null && p.lon_approx != null
+      ? haversineKm(userLoc.lat, userLoc.lon, p.lat_approx, p.lon_approx) : null;
     return { post: p, dist: d };
   });
 
@@ -380,14 +380,14 @@ function QuestsMiniMap({ quests, userLoc, onSelect }: {
       }
 
       quests.forEach((q) => {
-        if (q.latitude == null || q.longitude == null) return;
+        if (q.lat_approx == null || q.lon_approx == null) return;
         const html = `<div style="position:relative;width:40px;height:50px;filter:drop-shadow(0 2px 8px rgba(255,180,60,.6))"><div style="position:absolute;top:0;left:0;width:40px;height:40px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:linear-gradient(135deg,#fbbf24,#f97316);border:2px solid #0d1b2a"></div><div style="position:absolute;top:7px;left:7px;width:26px;height:26px;border-radius:9999px;background:#0d1b2a;display:grid;place-items:center;color:#fbbf24;font-weight:800;font-size:10px">${q.points ?? "★"}</div></div>`;
         const icon = L.divIcon({ html, className: "", iconSize: [40, 50], iconAnchor: [20, 46] });
-        L.marker([q.latitude, q.longitude], { icon })
+        L.marker([q.lat_approx, q.lon_approx], { icon })
           .bindTooltip(escapeHtml(q.caption || "Sidequest"), { direction: "top" })
           .on("click", () => onSelect(q.id))
           .addTo(layerRef.current);
-        pts.push([q.latitude, q.longitude]);
+        pts.push([q.lat_approx, q.lon_approx]);
       });
 
       if (pts.length > 1) {
