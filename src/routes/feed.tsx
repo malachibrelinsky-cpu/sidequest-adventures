@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
-import { Heart, MessageCircle, Image as ImageIcon, Send, Trophy, Pencil, Trash2, Check, X, RotateCw, RotateCcw, Crop as CropIcon, ZoomIn, ZoomOut, Users, MapPin, Clock, Sparkles, CheckCircle2, Upload, Filter, List, Map as MapIcon } from "lucide-react";
+import { Heart, MessageCircle, Image as ImageIcon, Send, Trophy, Pencil, Trash2, Check, X, RotateCw, RotateCcw, Crop as CropIcon, ZoomIn, ZoomOut, Users, MapPin, Clock, Sparkles, CheckCircle2, Upload, Filter, List, Map as MapIcon, AlignStartVertical } from "lucide-react";
 import { z } from "zod";
 
 export const Route = createFileRoute("/feed")({
@@ -247,7 +247,7 @@ export function FeedPage() {
             </div>
             <div className="rounded-2xl border border-border bg-card/40 backdrop-blur p-3 space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1"><Filter className="size-3" /> Difficulty</span>
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1"><AlignStartVertical className="size-3" /> Difficulty</span>
                 {DIFFICULTIES.map((d) => {
                   const active = diffFilter.has(d);
                   return (
