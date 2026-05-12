@@ -75,6 +75,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       customer: customerId,
       metadata: { userId, managed_payments: "true" },
       ...(isRecurring && { subscription_data: { metadata: { userId } } }),
+      allow_promotion_codes: true,
       // Enable Stripe end-to-end compliance handling (tax + fraud + disputes + support)
       managed_payments: { enabled: true },
     } as Stripe.Checkout.SessionCreateParams & { managed_payments: { enabled: boolean } });
