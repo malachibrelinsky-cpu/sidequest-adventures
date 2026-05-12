@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
-import { Send, ArrowLeft, Trophy, Users, MapPin, Clock } from "lucide-react";
+import { Send, ArrowLeft, Trophy, Users, MapPin, Clock, Paperclip } from "lucide-react";
+import { uploadChatMedia, detectChatMedia } from "@/lib/chat-media";
 
 export const Route = createFileRoute("/quest-chat/$questId")({
   head: () => ({ meta: [{ title: "Quest chat — SideQuest" }] }),
@@ -30,6 +31,8 @@ function QuestChatPage() {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
 
@@ -89,6 +92,24 @@ function QuestChatPage() {
     if (error) { toast.error(error.message); setText(body); }
   };
 
+  const onPickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !user || uploading) return;
+    setUploading(true);
+    try {
+      const url = await uploadChatMedia(file, user.id);
+      const { error } = await supabase.from("quest_messages").insert({
+        post_id: questId, user_id: user.id, body: url,
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      toast.error(err?.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (loading || !user) return <div className="min-h-screen grid place-items-center text-muted-foreground">Loading…</div>;
 
   return (
@@ -138,6 +159,7 @@ function QuestChatPage() {
             {messages.map((m) => {
               const mine = m.user_id === user.id;
               const author = profileMap[m.user_id];
+              const media = detectChatMedia(m.body);
               return (
                 <div key={m.id} className={`flex gap-2 ${mine ? "justify-end" : "justify-start"}`}>
                   {!mine && (
@@ -145,22 +167,41 @@ function QuestChatPage() {
                       ? <img src={author.avatar_url} alt="" className="size-7 rounded-full object-cover shrink-0" />
                       : <div className="size-7 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground text-xs font-bold shrink-0">{author?.display_name?.[0]?.toUpperCase() ?? "?"}</div>
                   )}
-                  <div className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${mine
-                    ? "bg-gradient-to-br from-primary to-accent text-primary-foreground rounded-br-sm"
-                    : "bg-muted/50 text-foreground rounded-bl-sm"}`}>
-                    {!mine && <p className="text-[10px] font-semibold opacity-70 mb-0.5">{author?.display_name ?? "Quester"}</p>}
-                    {m.body}
-                  </div>
+                  {media ? (
+                    <div className={`max-w-[75%] overflow-hidden rounded-2xl ${mine ? "rounded-br-sm" : "rounded-bl-sm"} bg-muted/30`}>
+                      {!mine && <p className="text-[10px] font-semibold opacity-70 px-3 pt-2">{author?.display_name ?? "Quester"}</p>}
+                      {media.kind === "image" ? (
+                        <a href={media.url} target="_blank" rel="noreferrer">
+                          <img src={media.url} alt="" className="max-h-80 w-full object-cover" />
+                        </a>
+                      ) : (
+                        <video src={media.url} controls playsInline className="max-h-80 w-full" />
+                      )}
+                    </div>
+                  ) : (
+                    <div className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap break-words ${mine
+                      ? "bg-gradient-to-br from-primary to-accent text-primary-foreground rounded-br-sm"
+                      : "bg-muted/50 text-foreground rounded-bl-sm"}`}>
+                      {!mine && <p className="text-[10px] font-semibold opacity-70 mb-0.5">{author?.display_name ?? "Quester"}</p>}
+                      {m.body}
+                    </div>
+                  )}
                 </div>
               );
             })}
             <div ref={endRef} />
           </div>
-          <form onSubmit={send} className="border-t border-border p-3 flex gap-2">
+          <form onSubmit={send} className="border-t border-border p-3 flex gap-2 items-center">
+            <input ref={fileRef} type="file" accept="image/*,video/*" className="hidden" onChange={onPickFile} />
+            <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
+              title="Send photo or video"
+              className="size-10 rounded-full bg-muted/30 hover:bg-muted/60 grid place-items-center disabled:opacity-50 transition shrink-0">
+              <Paperclip className="size-4" />
+            </button>
             <input
               value={text} onChange={(e) => setText(e.target.value)}
               maxLength={2000}
-              placeholder="Message the crew…"
+              placeholder={uploading ? "Uploading…" : "Message the crew…"}
               className="flex-1 bg-muted/30 rounded-full px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary text-sm"
             />
             <button type="submit" disabled={!text.trim() || sending}
