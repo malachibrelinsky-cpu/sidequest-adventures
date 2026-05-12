@@ -185,6 +185,8 @@ export function FeedPage() {
     return sorted;
   }, [isQuestsRoute, baseQuestsList, diffFilter, maxDistance, timeWindow, onlyJoinable, questSort]);
 
+  if (loading || !user) return <div className="min-h-screen grid place-items-center text-muted-foreground">Loading…</div>;
+
   const filtered = (tab === "all" ? allList : tab === "quests" ? questsList : updatesList);
   const counts = { all: posts.length, quests: baseQuestsList.length, updates: updatesList.length };
 
