@@ -192,8 +192,7 @@ function TermsPage() {
           <Section title="14. Contact">
             <p>For questions regarding these Terms, contact:</p>
             <p>
-              Sidequest Support<br />
-              Email: support@sidequestapp.com
+              sidequest.services26@gmail.com
             </p>
           </Section>
         </div>
