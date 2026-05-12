@@ -958,6 +958,7 @@ function CropModal({ file, rotation, onCancel, onApply }: {
 
 function ComposeQuest({ onPosted }: { onPosted: () => void }) {
   const { user } = useAuth();
+  const { isPremium } = usePremium();
   const [open, setOpen] = useState(false);
   const [activity, setActivity] = useState("");
   const [location, setLocation] = useState("");
@@ -979,6 +980,36 @@ function ComposeQuest({ onPosted }: { onPosted: () => void }) {
     if (participants < 1 || participants > 50) { toast.error("Players must be 1–50"); return; }
     const trimmedNotes = notes.trim();
     if (trimmedNotes.length > 1000) { toast.error("Comments must be under 1000 chars"); return; }
+
+    // Basic-plan weekly upload limits (resets Sunday 12am local time)
+    if (!isPremium) {
+      if (difficulty === "impossible") {
+        toast.error("Impossible quests are Premium-only. Upgrade to post one.");
+        return;
+      }
+      const weekStart = new Date();
+      weekStart.setHours(0, 0, 0, 0);
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Sunday 00:00 local
+      const { data: weekPosts, error: countErr } = await supabase
+        .from("posts")
+        .select("id, difficulty")
+        .eq("user_id", user.id)
+        .gte("created_at", weekStart.toISOString());
+      if (countErr) { toast.error(countErr.message); return; }
+      const total = weekPosts?.length ?? 0;
+      if (total >= 5) {
+        toast.error("Basic plan limit reached: 5 quests/week. Resets Sunday 12am.");
+        return;
+      }
+      if (difficulty === "epic") {
+        const epicCount = (weekPosts ?? []).filter((p) => p.difficulty === "epic").length;
+        if (epicCount >= 1) {
+          toast.error("Basic plan limit reached: 1 Epic quest/week. Resets Sunday 12am.");
+          return;
+        }
+      }
+    }
+
     setSubmitting(true);
     const { error } = await supabase.from("posts").insert({
       user_id: user.id,
