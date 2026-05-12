@@ -139,6 +139,7 @@ export type Database = {
           latitude: number | null
           location: string | null
           longitude: number | null
+          notes: string | null
           participants_needed: number | null
           points: number | null
           quest_time: string | null
@@ -155,6 +156,7 @@ export type Database = {
           latitude?: number | null
           location?: string | null
           longitude?: number | null
+          notes?: string | null
           participants_needed?: number | null
           points?: number | null
           quest_time?: string | null
@@ -171,6 +173,7 @@ export type Database = {
           latitude?: number | null
           location?: string | null
           longitude?: number | null
+          notes?: string | null
           participants_needed?: number | null
           points?: number | null
           quest_time?: string | null
