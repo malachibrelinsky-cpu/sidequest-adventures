@@ -71,7 +71,7 @@ async function rotateImageFile(file: File, degrees: number): Promise<File> {
 
 type Tab = "all" | "quests" | "updates";
 
-type PostWithCoords = Post & { latitude: number | null; longitude: number | null };
+type PostWithCoords = Post & { lat_approx: number | null; lon_approx: number | null; latitude?: number | null; longitude?: number | null };
 
 function haversineKm(aLat: number, aLon: number, bLat: number, bLon: number): number {
   const R = 6371;
