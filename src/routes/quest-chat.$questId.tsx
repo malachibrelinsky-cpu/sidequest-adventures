@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
-import { Send, ArrowLeft, Trophy, Users, MapPin, Clock } from "lucide-react";
+import { Send, ArrowLeft, Trophy, Users, MapPin, Clock, Paperclip } from "lucide-react";
+import { uploadChatMedia, detectChatMedia } from "@/lib/chat-media";
 
 export const Route = createFileRoute("/quest-chat/$questId")({
   head: () => ({ meta: [{ title: "Quest chat — SideQuest" }] }),
