@@ -18,10 +18,11 @@ export const Route = createFileRoute("/pricing")({
 });
 
 const basic = [
-  "Post 1 sidequest per week",
-  "Match with 1 quester every 2 days",
-  "Map limited to a 10-mile radius",
-  "1 photo post & 1 comment per day",
+  "Unlimited Common quests / week",
+  "5 Rare quests / week",
+  "2 Epic quests / week",
+  "Impossible quests locked (Premium only)",
+  "Cooldown resets Sunday 12am",
   "Direct messaging",
 ];
 
