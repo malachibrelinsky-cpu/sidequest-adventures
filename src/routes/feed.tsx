@@ -219,7 +219,7 @@ export function FeedPage() {
           </div>
         </div>
 
-        {isQuestsRoute && <ComposeQuest onPosted={load} />}
+        {isQuestsRoute ? <ComposeQuest onPosted={load} /> : <ComposeUpdate onPosted={load} />}
 
         {isQuestsRoute ? (
           <div className="mt-8 mb-5 space-y-3">
@@ -1047,6 +1047,128 @@ function ComposeQuest({ onPosted }: { onPosted: () => void }) {
         <button onClick={() => { reset(); setOpen(false); }} className="rounded-full px-4 py-2 text-sm font-semibold bg-muted hover:bg-muted/70 transition">Cancel</button>
         <button onClick={submit} disabled={submitting} className="rounded-full px-5 py-2 text-sm font-semibold bg-gradient-to-r from-primary to-accent text-primary-foreground disabled:opacity-50 hover:opacity-90 transition inline-flex items-center gap-2">
           <Send className="size-3.5" /> {submitting ? "Posting…" : "Post quest"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ComposeUpdate({ onPosted }: { onPosted: () => void }) {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [caption, setCaption] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const reset = () => { setCaption(""); setFiles([]); };
+
+  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files ?? []).slice(0, 6 - files.length);
+    setFiles((prev) => [...prev, ...picked].slice(0, 6));
+    e.target.value = "";
+  };
+
+  const removeAt = (i: number) => setFiles((prev) => prev.filter((_, idx) => idx !== i));
+
+  const submit = async () => {
+    if (!user || submitting) return;
+    const cap = caption.trim();
+    if (!cap && files.length === 0) { toast.error("Add a caption or a photo"); return; }
+    if (cap.length > 150) { toast.error("Caption must be under 150 chars"); return; }
+    setSubmitting(true);
+    try {
+      const urls: string[] = [];
+      for (const f of files) {
+        const ext = (f.name.split(".").pop() ?? "jpg").toLowerCase();
+        const path = `${user.id}/updates/${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("post-images").upload(path, f, { contentType: f.type });
+        if (upErr) throw upErr;
+        const { data } = supabase.storage.from("post-images").getPublicUrl(path);
+        urls.push(data.publicUrl);
+      }
+      const { error } = await supabase.rpc("post_update", {
+        p_caption: cap || null,
+        p_image_urls: urls,
+      } as never);
+      if (error) throw error;
+      toast.success("Update posted!");
+      reset();
+      setOpen(false);
+      onPosted();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Could not post update");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <div className="mb-5">
+        <button
+          onClick={() => setOpen(true)}
+          className="w-full rounded-2xl border border-dashed border-primary/40 bg-card/40 hover:bg-card/60 hover:border-primary transition px-4 py-4 inline-flex items-center justify-center gap-2 text-sm font-semibold text-primary"
+        >
+          <ImageIcon className="size-4" /> Share a photo update
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-5 rounded-2xl border border-border bg-card/60 backdrop-blur p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-bold inline-flex items-center gap-2"><ImageIcon className="size-4 text-primary" /> New update</h3>
+        <button onClick={() => { reset(); setOpen(false); }} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
+      </div>
+
+      <div>
+        <label className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 block">Caption</label>
+        <input
+          value={caption}
+          onChange={(e) => setCaption(e.target.value)}
+          placeholder="What happened?"
+          maxLength={150}
+          className="w-full rounded-xl bg-background border border-border px-3 py-2 text-sm outline-none focus:border-primary"
+        />
+      </div>
+
+      <div>
+        <input ref={fileRef} type="file" multiple accept="image/*" className="hidden" onChange={onPick} />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={files.length >= 6}
+          className="w-full rounded-xl border-2 border-dashed border-border hover:border-primary/50 p-4 text-center transition disabled:opacity-50"
+        >
+          <Upload className="size-5 mx-auto text-muted-foreground mb-1" />
+          <p className="text-xs font-semibold">Add photos</p>
+          <p className="text-[10px] text-muted-foreground">{files.length}/6 selected</p>
+        </button>
+        {files.length > 0 && (
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            {files.map((f, i) => {
+              const url = URL.createObjectURL(f);
+              return (
+                <div key={i} className="relative">
+                  <img src={url} alt="" className="w-full aspect-square object-cover rounded-lg bg-muted/30" />
+                  <button type="button" onClick={() => removeAt(i)}
+                    className="absolute top-1 right-1 size-6 rounded-full bg-black/70 text-white grid place-items-center hover:bg-black">
+                    <X className="size-3" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-end gap-2 pt-1">
+        <button onClick={() => { reset(); setOpen(false); }} className="rounded-full px-4 py-2 text-sm font-semibold bg-muted hover:bg-muted/70 transition">Cancel</button>
+        <button onClick={submit} disabled={submitting || (!caption.trim() && files.length === 0)}
+          className="rounded-full px-5 py-2 text-sm font-semibold bg-gradient-to-r from-primary to-accent text-primary-foreground disabled:opacity-50 hover:opacity-90 transition inline-flex items-center gap-2">
+          <Send className="size-3.5" /> {submitting ? "Posting…" : "Post update"}
         </button>
       </div>
     </div>

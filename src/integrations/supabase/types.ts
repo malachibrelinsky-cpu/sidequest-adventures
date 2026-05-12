@@ -558,6 +558,10 @@ export type Database = {
         }
         Returns: string
       }
+      post_update: {
+        Args: { p_caption: string; p_image_urls: string[] }
+        Returns: string
+      }
       revive_streak: { Args: never; Returns: undefined }
     }
     Enums: {
