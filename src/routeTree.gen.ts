@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as QuestsRouteImport } from './routes/quests'
 import { Route as QuanRouteImport } from './routes/quan'
@@ -29,6 +30,11 @@ import { Route as QuestChatQuestIdRouteImport } from './routes/quest-chat.$quest
 import { Route as MessagesUserIdRouteImport } from './routes/messages.$userId'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -140,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
   '/settings': typeof SettingsRoute
+  '/terms': typeof TermsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/messages/$userId': typeof MessagesUserIdRoute
   '/quest-chat/$questId': typeof QuestChatQuestIdRoute
@@ -161,6 +168,7 @@ export interface FileRoutesByTo {
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
   '/settings': typeof SettingsRoute
+  '/terms': typeof TermsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/messages/$userId': typeof MessagesUserIdRoute
   '/quest-chat/$questId': typeof QuestChatQuestIdRoute
@@ -183,6 +191,7 @@ export interface FileRoutesById {
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
   '/settings': typeof SettingsRoute
+  '/terms': typeof TermsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/messages/$userId': typeof MessagesUserIdRoute
   '/quest-chat/$questId': typeof QuestChatQuestIdRoute
@@ -206,6 +215,7 @@ export interface FileRouteTypes {
     | '/quan'
     | '/quests'
     | '/settings'
+    | '/terms'
     | '/checkout/return'
     | '/messages/$userId'
     | '/quest-chat/$questId'
@@ -227,6 +237,7 @@ export interface FileRouteTypes {
     | '/quan'
     | '/quests'
     | '/settings'
+    | '/terms'
     | '/checkout/return'
     | '/messages/$userId'
     | '/quest-chat/$questId'
@@ -248,6 +259,7 @@ export interface FileRouteTypes {
     | '/quan'
     | '/quests'
     | '/settings'
+    | '/terms'
     | '/checkout/return'
     | '/messages/$userId'
     | '/quest-chat/$questId'
@@ -270,6 +282,7 @@ export interface RootRouteChildren {
   QuanRoute: typeof QuanRoute
   QuestsRoute: typeof QuestsRoute
   SettingsRoute: typeof SettingsRoute
+  TermsRoute: typeof TermsRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   MessagesUserIdRoute: typeof MessagesUserIdRoute
   QuestChatQuestIdRoute: typeof QuestChatQuestIdRoute
@@ -279,6 +292,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -430,6 +450,7 @@ const rootRouteChildren: RootRouteChildren = {
   QuanRoute: QuanRoute,
   QuestsRoute: QuestsRoute,
   SettingsRoute: SettingsRoute,
+  TermsRoute: TermsRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   MessagesUserIdRoute: MessagesUserIdRoute,
   QuestChatQuestIdRoute: QuestChatQuestIdRoute,
@@ -439,3 +460,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
