@@ -90,6 +90,7 @@ function AuthPage() {
     try {
       const nameOk = displayNameSchema.safeParse(displayName);
       if (!nameOk.success) { toast.error("Display name must be 2–50 chars"); return; }
+      if (!otpSent && !agreedTerms) { toast.error("Please agree to the Terms & Conditions"); return; }
 
       // Phone-only signup (or both → phase 2 below)
       if (method === "phone") {
