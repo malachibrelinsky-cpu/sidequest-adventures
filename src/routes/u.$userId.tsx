@@ -127,6 +127,23 @@ function PublicProfilePage() {
     await load();
   };
 
+  const toggleFollow = async () => {
+    if (!user) { navigate({ to: "/auth" }); return; }
+    setFollowBusy(true);
+    if (isFollowing) {
+      const { error } = await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", userId);
+      if (error) { toast.error(error.message); setFollowBusy(false); return; }
+      setIsFollowing(false);
+      setFollowerCount((c) => Math.max(0, c - 1));
+    } else {
+      const { error } = await supabase.from("follows").insert({ follower_id: user.id, following_id: userId });
+      if (error) { toast.error(error.message); setFollowBusy(false); return; }
+      setIsFollowing(true);
+      setFollowerCount((c) => c + 1);
+    }
+    setFollowBusy(false);
+  };
+
   const submitReport = async () => {
     if (!user) { navigate({ to: "/auth" }); return; }
     if (reportReason.trim().length < 3) { toast.error("Describe the issue"); return; }
