@@ -208,12 +208,23 @@ function PublicProfilePage() {
               </div>
               {profile.city && <p className="text-sm text-muted-foreground">{profile.city}</p>}
               {profile.bio && <p className="text-sm mt-2">{profile.bio}</p>}
-              <div className="mt-3 flex items-center gap-4 text-sm">
+              <div className="mt-3 flex items-center gap-4 text-sm flex-wrap">
                 <div className="flex items-center gap-1">
                   <Star className="size-4 fill-yellow-400 text-yellow-400" />
                   <span className="font-bold">{ratings.length === 0 ? "—" : avg.toFixed(1)}</span>
                   <span className="text-muted-foreground">({ratings.length})</span>
                 </div>
+                <span className="text-muted-foreground"><span className="font-bold text-foreground">{followerCount}</span> followers</span>
+                <span className="text-muted-foreground"><span className="font-bold text-foreground">{followingCount}</span> following</span>
+                {!isSelf && (
+                  <button
+                    onClick={toggleFollow}
+                    disabled={followBusy}
+                    className={`rounded-full px-4 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${isFollowing ? "border border-border bg-card hover:border-destructive hover:text-destructive" : "bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90"}`}
+                  >
+                    {isFollowing ? "Following" : "Follow"}
+                  </button>
+                )}
                 {!isSelf && user && (
                   <button onClick={() => setReportOpen(true)} className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition">
                     <Flag className="size-3.5" /> Report
