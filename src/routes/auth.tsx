@@ -41,6 +41,10 @@ function AuthPage() {
   // Login phone toggle
   const [loginUsePhone, setLoginUsePhone] = useState(false);
 
+  // Signup consent
+  const [agreedTerms, setAgreedTerms] = useState(false);
+  const [allowContacts, setAllowContacts] = useState(false);
+
   const [loading, setLoading] = useState(false);
 
   useEffect(() => { if (user) navigate({ to: "/feed" }); }, [user, navigate]);
