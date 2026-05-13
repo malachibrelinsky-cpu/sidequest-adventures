@@ -109,3 +109,43 @@ export const verifyPhoneOtp = createServerFn({ method: "POST" })
     // Return the one-time password the client uses to sign in immediately.
     return { phone, password };
   });
+
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
+const verifyAttachInput = z.object({ phone: phoneSchema, code: z.string().regex(/^\d{6}$/) });
+
+export const verifyAndAttachPhone = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => verifyAttachInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { phone, code } = data;
+    const { userId } = context;
+
+    const { data: row } = await supabaseAdmin
+      .from("phone_otps")
+      .select("code_hash, expires_at, attempts")
+      .eq("phone_e164", phone)
+      .maybeSingle();
+    if (!row) throw new Error("No code found — request a new one.");
+    if (new Date(row.expires_at as string).getTime() < Date.now()) {
+      await supabaseAdmin.from("phone_otps").delete().eq("phone_e164", phone);
+      throw new Error("Code expired — request a new one.");
+    }
+    if ((row.attempts ?? 0) >= 5) throw new Error("Too many attempts — request a new code.");
+
+    const expected = await sha256Hex(`${phone}:${code}`);
+    if (expected !== row.code_hash) {
+      await supabaseAdmin.from("phone_otps").update({ attempts: (row.attempts ?? 0) + 1 }).eq("phone_e164", phone);
+      throw new Error("Incorrect code.");
+    }
+
+    await supabaseAdmin.from("phone_otps").delete().eq("phone_e164", phone);
+
+    const { error: upErr } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      phone,
+      phone_confirm: true,
+    });
+    if (upErr) throw new Error(upErr.message);
+
+    return { ok: true as const };
+  });
