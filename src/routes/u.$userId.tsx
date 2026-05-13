@@ -47,15 +47,29 @@ function PublicProfilePage() {
   const [reportReason, setReportReason] = useState("");
   const [reportContext, setReportContext] = useState("");
   const [reporting, setReporting] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
 
   const isSelf = user?.id === userId;
 
   const load = async () => {
-    const [{ data: p }, { data: r }, { data: m }] = await Promise.all([
+    const [{ data: p }, { data: r }, { data: m }, { count: fCount }, { count: gCount }] = await Promise.all([
       supabase.from("profiles").select("id, display_name, avatar_url, bio, city, interests").eq("id", userId).maybeSingle(),
       supabase.from("profile_ratings").select("id, rater_id, stars, review, created_at").eq("ratee_id", userId).order("created_at", { ascending: false }),
       supabase.from("user_moderation").select("status, reason, until").eq("user_id", userId).maybeSingle(),
+      supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", userId),
+      supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", userId),
     ]);
+    setFollowerCount(fCount ?? 0);
+    setFollowingCount(gCount ?? 0);
+    if (user && !isSelf) {
+      const { data: f } = await supabase.from("follows").select("follower_id").eq("follower_id", user.id).eq("following_id", userId).maybeSingle();
+      setIsFollowing(!!f);
+    } else {
+      setIsFollowing(false);
+    }
     setProfile(p as Profile | null);
     let withRaters: Rating[] = [];
     if (r && r.length > 0) {
