@@ -596,6 +596,7 @@ export type Database = {
           phone_e164: string
         }[]
       }
+      get_my_quest_completion_notes: { Args: { p_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
