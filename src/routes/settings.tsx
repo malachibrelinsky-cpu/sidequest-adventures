@@ -142,6 +142,19 @@ function SettingsPage() {
               onChange={(v) => update("notifications", v)}
             />
           </Section>
+
+          {user && (
+            <Section icon={<Lock className="size-4 text-primary" />} title="Privacy" desc="Control how others can find you.">
+              <Toggle
+                label="Discoverable by contacts"
+                desc={hasPhone
+                  ? "Friends with your number in their contacts can find you on SideQuest."
+                  : "Add a phone number to your account to enable contact discovery."}
+                value={discoverable ?? false}
+                onChange={(v) => { if (hasPhone) toggleDiscoverable(v); else toast.info("Add a phone number first"); }}
+              />
+            </Section>
+          )}
         </div>
       </main>
       <SiteFooter />
