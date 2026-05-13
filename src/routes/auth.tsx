@@ -7,6 +7,7 @@ import { Compass, Mail, Phone, ShieldCheck } from "lucide-react";
 import { z } from "zod";
 import { COUNTRY_CODES, toE164 } from "@/lib/phone";
 import type { CountryCode } from "libphonenumber-js";
+import { sendPhoneOtp, verifyPhoneOtp, verifyAndAttachPhone } from "@/lib/phone-otp.functions";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Join SideQuest" }, { name: "description", content: "Sign in or create your SideQuest account." }] }),
@@ -62,12 +63,14 @@ function AuthPage() {
         if (!otpSent) {
           const e164 = toE164(phone, country);
           if (!e164) { toast.error("Enter a valid phone number"); return; }
-          const { error } = await supabase.auth.signInWithOtp({ phone: e164 });
-          if (error) throw error;
+          await sendPhoneOtp({ data: { phone: e164 } });
           setPhoneE164(e164); setOtpSent(true);
           toast.success("Code sent — check your texts");
         } else {
-          const { error } = await supabase.auth.verifyOtp({ phone: phoneE164!, token: otp.trim(), type: "sms" });
+          const { phone: ph, password: pw } = await verifyPhoneOtp({
+            data: { phone: phoneE164!, code: otp.trim(), mode: "login" },
+          });
+          const { error } = await supabase.auth.signInWithPassword({ phone: ph, password: pw });
           if (error) throw error;
           navigate({ to: "/feed" });
         }
@@ -92,20 +95,19 @@ function AuthPage() {
       if (!nameOk.success) { toast.error("Display name must be 2–50 chars"); return; }
       if (!otpSent && !agreedTerms) { toast.error("Please agree to the Terms & Conditions"); return; }
 
-      // Phone-only signup (or both → phase 2 below)
+      // Phone-only signup
       if (method === "phone") {
         if (!otpSent) {
           const e164 = toE164(phone, country);
           if (!e164) { toast.error("Enter a valid phone number"); return; }
-          const { error } = await supabase.auth.signInWithOtp({
-            phone: e164,
-            options: { data: { display_name: displayName } },
-          });
-          if (error) throw error;
+          await sendPhoneOtp({ data: { phone: e164 } });
           setPhoneE164(e164); setOtpSent(true);
           toast.success("Code sent — check your texts");
         } else {
-          const { error } = await supabase.auth.verifyOtp({ phone: phoneE164!, token: otp.trim(), type: "sms" });
+          const { phone: ph, password: pw } = await verifyPhoneOtp({
+            data: { phone: phoneE164!, code: otp.trim(), mode: "signup", displayName },
+          });
+          const { error } = await supabase.auth.signInWithPassword({ phone: ph, password: pw });
           if (error) throw error;
           navigate({ to: allowContacts ? "/onboarding/contacts" : "/feed" });
         }
@@ -128,9 +130,7 @@ function AuthPage() {
         if (method === "both") {
           const e164 = toE164(phone, country);
           if (!e164) { toast.error("Enter a valid phone number"); return; }
-          // Attach phone to the just-created user (requires session)
-          const { error: upErr } = await supabase.auth.updateUser({ phone: e164 });
-          if (upErr) throw upErr;
+          await sendPhoneOtp({ data: { phone: e164 } });
           setPhoneE164(e164); setOtpSent(true);
           toast.success("Verify your phone — code sent");
           return;
@@ -139,9 +139,8 @@ function AuthPage() {
         toast.success("Welcome to SideQuest!");
         navigate({ to: allowContacts ? "/onboarding/contacts" : "/feed" });
       } else {
-        // both → OTP verify of phone change
-        const { error } = await supabase.auth.verifyOtp({ phone: phoneE164!, token: otp.trim(), type: "phone_change" });
-        if (error) throw error;
+        // both → verify OTP and attach phone to current (already signed-in) user
+        await verifyAndAttachPhone({ data: { phone: phoneE164!, code: otp.trim() } });
         navigate({ to: allowContacts ? "/onboarding/contacts" : "/feed" });
       }
     } catch (err) {
