@@ -47,15 +47,29 @@ function PublicProfilePage() {
   const [reportReason, setReportReason] = useState("");
   const [reportContext, setReportContext] = useState("");
   const [reporting, setReporting] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
 
   const isSelf = user?.id === userId;
 
   const load = async () => {
-    const [{ data: p }, { data: r }, { data: m }] = await Promise.all([
+    const [{ data: p }, { data: r }, { data: m }, { count: fCount }, { count: gCount }] = await Promise.all([
       supabase.from("profiles").select("id, display_name, avatar_url, bio, city, interests").eq("id", userId).maybeSingle(),
       supabase.from("profile_ratings").select("id, rater_id, stars, review, created_at").eq("ratee_id", userId).order("created_at", { ascending: false }),
       supabase.from("user_moderation").select("status, reason, until").eq("user_id", userId).maybeSingle(),
+      supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", userId),
+      supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", userId),
     ]);
+    setFollowerCount(fCount ?? 0);
+    setFollowingCount(gCount ?? 0);
+    if (user && !isSelf) {
+      const { data: f } = await supabase.from("follows").select("follower_id").eq("follower_id", user.id).eq("following_id", userId).maybeSingle();
+      setIsFollowing(!!f);
+    } else {
+      setIsFollowing(false);
+    }
     setProfile(p as Profile | null);
     let withRaters: Rating[] = [];
     if (r && r.length > 0) {
@@ -111,6 +125,23 @@ function PublicProfilePage() {
     setDraftReview("");
     toast.success("Rating removed");
     await load();
+  };
+
+  const toggleFollow = async () => {
+    if (!user) { navigate({ to: "/auth" }); return; }
+    setFollowBusy(true);
+    if (isFollowing) {
+      const { error } = await supabase.from("follows").delete().eq("follower_id", user.id).eq("following_id", userId);
+      if (error) { toast.error(error.message); setFollowBusy(false); return; }
+      setIsFollowing(false);
+      setFollowerCount((c) => Math.max(0, c - 1));
+    } else {
+      const { error } = await supabase.from("follows").insert({ follower_id: user.id, following_id: userId });
+      if (error) { toast.error(error.message); setFollowBusy(false); return; }
+      setIsFollowing(true);
+      setFollowerCount((c) => c + 1);
+    }
+    setFollowBusy(false);
   };
 
   const submitReport = async () => {
@@ -177,12 +208,23 @@ function PublicProfilePage() {
               </div>
               {profile.city && <p className="text-sm text-muted-foreground">{profile.city}</p>}
               {profile.bio && <p className="text-sm mt-2">{profile.bio}</p>}
-              <div className="mt-3 flex items-center gap-4 text-sm">
+              <div className="mt-3 flex items-center gap-4 text-sm flex-wrap">
                 <div className="flex items-center gap-1">
                   <Star className="size-4 fill-yellow-400 text-yellow-400" />
                   <span className="font-bold">{ratings.length === 0 ? "—" : avg.toFixed(1)}</span>
                   <span className="text-muted-foreground">({ratings.length})</span>
                 </div>
+                <span className="text-muted-foreground"><span className="font-bold text-foreground">{followerCount}</span> followers</span>
+                <span className="text-muted-foreground"><span className="font-bold text-foreground">{followingCount}</span> following</span>
+                {!isSelf && (
+                  <button
+                    onClick={toggleFollow}
+                    disabled={followBusy}
+                    className={`rounded-full px-4 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${isFollowing ? "border border-border bg-card hover:border-destructive hover:text-destructive" : "bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90"}`}
+                  >
+                    {isFollowing ? "Following" : "Follow"}
+                  </button>
+                )}
                 {!isSelf && user && (
                   <button onClick={() => setReportOpen(true)} className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition">
                     <Flag className="size-3.5" /> Report
