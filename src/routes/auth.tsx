@@ -267,6 +267,37 @@ function AuthPage() {
               </p>
             )}
 
+            {!otpSent && (
+              <div className="space-y-2 pt-1">
+                <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={agreedTerms}
+                    onChange={(e) => setAgreedTerms(e.target.checked)}
+                    className="mt-0.5 size-4 rounded border-border accent-primary shrink-0"
+                    required
+                  />
+                  <span>
+                    I understand and agree to the{" "}
+                    <Link to="/terms" className="text-primary hover:underline">Terms & Conditions</Link>
+                    {" "}and{" "}
+                    <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allowContacts}
+                    onChange={(e) => setAllowContacts(e.target.checked)}
+                    className="mt-0.5 size-4 rounded border-border accent-primary shrink-0"
+                  />
+                  <span>
+                    <span className="font-medium text-foreground">Optional:</span> Allow SideQuest to access my contacts to find friends already on the app. Phone numbers are hashed locally — we never upload your contact list.
+                  </span>
+                </label>
+              </div>
+            )}
+
             <button type="submit" disabled={loading}
               className="w-full rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground py-3 font-semibold disabled:opacity-50 hover:opacity-90 transition">
               {loading ? "..." : otpSent ? "Verify code" : (method === "email" ? "Create account" : "Send code")}
