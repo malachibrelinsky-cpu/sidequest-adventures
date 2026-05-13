@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { useSettings, type Language, type DistanceUnit, type FontSize } from "@/hooks/use-settings";
-import { Accessibility, Globe, MapPin, Ruler, Bell, Type, RotateCcw, Lock } from "lucide-react";
+import { Accessibility, Globe, MapPin, Ruler, Bell, Type, RotateCcw, Lock, User as UserIcon, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { toE164 } from "@/lib/phone";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -39,8 +40,24 @@ function SettingsPage() {
   const [discoverable, setDiscoverable] = useState<boolean | null>(null);
   const [hasPhone, setHasPhone] = useState(false);
 
+  // Account state
+  const [displayName, setDisplayName] = useState("");
+  const [savingName, setSavingName] = useState(false);
+  const [email, setEmail] = useState("");
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
+  const [otpStep, setOtpStep] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [pendingPhone, setPendingPhone] = useState("");
+
   useEffect(() => {
     if (!user) return;
+    setEmail(user.email ?? "");
+    setPhone(user.phone ? `+${user.phone}` : "");
+    supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle().then(({ data }) => {
+      if (data?.display_name) setDisplayName(data.display_name);
+    });
     supabase.rpc("get_my_profile_phone").then(({ data }) => {
       const row = Array.isArray(data) ? data[0] : data;
       if (row) {
@@ -55,6 +72,50 @@ function SettingsPage() {
     const { error } = await supabase.from("profiles").update({ discoverable_by_contacts: v }).eq("id", user!.id);
     if (error) { toast.error(error.message); setDiscoverable(!v); }
     else toast.success(v ? "You're discoverable by contacts" : "Hidden from contact discovery");
+  };
+
+  const saveDisplayName = async () => {
+    const name = displayName.trim();
+    if (name.length < 2 || name.length > 50) { toast.error("Username must be 2-50 characters"); return; }
+    setSavingName(true);
+    const { error } = await supabase.from("profiles").update({ display_name: name }).eq("id", user!.id);
+    setSavingName(false);
+    if (error) toast.error(error.message);
+    else toast.success("Username updated");
+  };
+
+  const saveEmail = async () => {
+    const trimmed = email.trim();
+    if (!/^\S+@\S+\.\S+$/.test(trimmed)) { toast.error("Enter a valid email"); return; }
+    setSavingEmail(true);
+    const { error } = await supabase.auth.updateUser({ email: trimmed });
+    setSavingEmail(false);
+    if (error) toast.error(error.message);
+    else toast.success("Check your inbox to confirm the new email");
+  };
+
+  const sendPhoneOtp = async () => {
+    const e164 = toE164(phone);
+    if (!e164) { toast.error("Enter a valid phone number with country code"); return; }
+    setSavingPhone(true);
+    const { error } = await supabase.auth.updateUser({ phone: e164 });
+    setSavingPhone(false);
+    if (error) { toast.error(error.message); return; }
+    setPendingPhone(e164);
+    setOtpStep(true);
+    toast.success("Verification code sent");
+  };
+
+  const verifyPhoneOtp = async () => {
+    if (!/^\d{6}$/.test(otpCode)) { toast.error("Enter the 6-digit code"); return; }
+    setSavingPhone(true);
+    const { error } = await supabase.auth.verifyOtp({ phone: pendingPhone, token: otpCode, type: "phone_change" });
+    setSavingPhone(false);
+    if (error) { toast.error(error.message); return; }
+    setOtpStep(false);
+    setOtpCode("");
+    setHasPhone(true);
+    toast.success("Phone number updated");
   };
 
   return (
@@ -142,6 +203,76 @@ function SettingsPage() {
               onChange={(v) => update("notifications", v)}
             />
           </Section>
+
+          {user && (
+            <Section icon={<UserIcon className="size-4 text-primary" />} title="Account" desc="Update your username, email and phone.">
+              <div className="rounded-lg p-3">
+                <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5 flex items-center gap-1.5"><UserIcon className="size-3.5" /> Username</label>
+                <div className="flex gap-2">
+                  <input
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    maxLength={50}
+                    className="flex-1 rounded-lg bg-input/40 border border-border px-3 py-2 text-sm outline-none focus:border-primary"
+                  />
+                  <button onClick={saveDisplayName} disabled={savingName} className="rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-4 py-2 text-xs font-semibold disabled:opacity-50 hover:opacity-90 transition">
+                    {savingName ? "Saving…" : "Save"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-lg p-3">
+                <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5 flex items-center gap-1.5"><Mail className="size-3.5" /> Email</label>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="flex-1 rounded-lg bg-input/40 border border-border px-3 py-2 text-sm outline-none focus:border-primary"
+                  />
+                  <button onClick={saveEmail} disabled={savingEmail} className="rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-4 py-2 text-xs font-semibold disabled:opacity-50 hover:opacity-90 transition">
+                    {savingEmail ? "Saving…" : "Save"}
+                  </button>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1.5">You'll receive a confirmation link at the new address.</p>
+              </div>
+
+              <div className="rounded-lg p-3">
+                <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5 flex items-center gap-1.5"><Phone className="size-3.5" /> Phone</label>
+                {!otpStep ? (
+                  <>
+                    <div className="flex gap-2">
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="+1 555 123 4567"
+                        className="flex-1 rounded-lg bg-input/40 border border-border px-3 py-2 text-sm outline-none focus:border-primary"
+                      />
+                      <button onClick={sendPhoneOtp} disabled={savingPhone} className="rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-4 py-2 text-xs font-semibold disabled:opacity-50 hover:opacity-90 transition">
+                        {savingPhone ? "Sending…" : "Send code"}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1.5">We'll text a 6-digit code to verify the new number.</p>
+                  </>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      inputMode="numeric"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="123456"
+                      className="flex-1 rounded-lg bg-input/40 border border-border px-3 py-2 text-sm outline-none focus:border-primary tracking-widest"
+                    />
+                    <button onClick={verifyPhoneOtp} disabled={savingPhone} className="rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-4 py-2 text-xs font-semibold disabled:opacity-50 hover:opacity-90 transition">
+                      {savingPhone ? "Verifying…" : "Verify"}
+                    </button>
+                    <button onClick={() => { setOtpStep(false); setOtpCode(""); }} className="text-xs text-muted-foreground hover:text-foreground px-2">Cancel</button>
+                  </div>
+                )}
+              </div>
+            </Section>
+          )}
 
           {user && (
             <Section icon={<Lock className="size-4 text-primary" />} title="Privacy" desc="Control how others can find you.">
