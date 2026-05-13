@@ -40,8 +40,24 @@ function SettingsPage() {
   const [discoverable, setDiscoverable] = useState<boolean | null>(null);
   const [hasPhone, setHasPhone] = useState(false);
 
+  // Account state
+  const [displayName, setDisplayName] = useState("");
+  const [savingName, setSavingName] = useState(false);
+  const [email, setEmail] = useState("");
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
+  const [otpStep, setOtpStep] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [pendingPhone, setPendingPhone] = useState("");
+
   useEffect(() => {
     if (!user) return;
+    setEmail(user.email ?? "");
+    setPhone(user.phone ? `+${user.phone}` : "");
+    supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle().then(({ data }) => {
+      if (data?.display_name) setDisplayName(data.display_name);
+    });
     supabase.rpc("get_my_profile_phone").then(({ data }) => {
       const row = Array.isArray(data) ? data[0] : data;
       if (row) {
@@ -56,6 +72,50 @@ function SettingsPage() {
     const { error } = await supabase.from("profiles").update({ discoverable_by_contacts: v }).eq("id", user!.id);
     if (error) { toast.error(error.message); setDiscoverable(!v); }
     else toast.success(v ? "You're discoverable by contacts" : "Hidden from contact discovery");
+  };
+
+  const saveDisplayName = async () => {
+    const name = displayName.trim();
+    if (name.length < 2 || name.length > 50) { toast.error("Username must be 2-50 characters"); return; }
+    setSavingName(true);
+    const { error } = await supabase.from("profiles").update({ display_name: name }).eq("id", user!.id);
+    setSavingName(false);
+    if (error) toast.error(error.message);
+    else toast.success("Username updated");
+  };
+
+  const saveEmail = async () => {
+    const trimmed = email.trim();
+    if (!/^\S+@\S+\.\S+$/.test(trimmed)) { toast.error("Enter a valid email"); return; }
+    setSavingEmail(true);
+    const { error } = await supabase.auth.updateUser({ email: trimmed });
+    setSavingEmail(false);
+    if (error) toast.error(error.message);
+    else toast.success("Check your inbox to confirm the new email");
+  };
+
+  const sendPhoneOtp = async () => {
+    const e164 = toE164(phone);
+    if (!e164) { toast.error("Enter a valid phone number with country code"); return; }
+    setSavingPhone(true);
+    const { error } = await supabase.auth.updateUser({ phone: e164 });
+    setSavingPhone(false);
+    if (error) { toast.error(error.message); return; }
+    setPendingPhone(e164);
+    setOtpStep(true);
+    toast.success("Verification code sent");
+  };
+
+  const verifyPhoneOtp = async () => {
+    if (!/^\d{6}$/.test(otpCode)) { toast.error("Enter the 6-digit code"); return; }
+    setSavingPhone(true);
+    const { error } = await supabase.auth.verifyOtp({ phone: pendingPhone, token: otpCode, type: "phone_change" });
+    setSavingPhone(false);
+    if (error) { toast.error(error.message); return; }
+    setOtpStep(false);
+    setOtpCode("");
+    setHasPhone(true);
+    toast.success("Phone number updated");
   };
 
   return (
