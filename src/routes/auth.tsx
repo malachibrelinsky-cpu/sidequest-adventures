@@ -107,7 +107,7 @@ function AuthPage() {
         } else {
           const { error } = await supabase.auth.verifyOtp({ phone: phoneE164!, token: otp.trim(), type: "sms" });
           if (error) throw error;
-          navigate({ to: "/onboarding/contacts" });
+          navigate({ to: allowContacts ? "/onboarding/contacts" : "/feed" });
         }
         return;
       }
@@ -137,12 +137,12 @@ function AuthPage() {
         }
 
         toast.success("Welcome to SideQuest!");
-        navigate({ to: "/onboarding/contacts" });
+        navigate({ to: allowContacts ? "/onboarding/contacts" : "/feed" });
       } else {
         // both → OTP verify of phone change
         const { error } = await supabase.auth.verifyOtp({ phone: phoneE164!, token: otp.trim(), type: "phone_change" });
         if (error) throw error;
-        navigate({ to: "/onboarding/contacts" });
+        navigate({ to: allowContacts ? "/onboarding/contacts" : "/feed" });
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Signup failed");
