@@ -1,8 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { useSettings, type Language, type DistanceUnit, type FontSize } from "@/hooks/use-settings";
-import { Accessibility, Globe, MapPin, Ruler, Bell, Type, RotateCcw } from "lucide-react";
+import { Accessibility, Globe, MapPin, Ruler, Bell, Type, RotateCcw, Lock } from "lucide-react";
 import { toast } from "sonner";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -32,6 +35,27 @@ const FONT_SIZES: { value: FontSize; label: string }[] = [
 
 function SettingsPage() {
   const { settings, update, reset } = useSettings();
+  const { user } = useAuth();
+  const [discoverable, setDiscoverable] = useState<boolean | null>(null);
+  const [hasPhone, setHasPhone] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.rpc("get_my_profile_phone").then(({ data }) => {
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row) {
+        setDiscoverable(row.discoverable_by_contacts ?? true);
+        setHasPhone(!!row.phone_e164);
+      }
+    });
+  }, [user]);
+
+  const toggleDiscoverable = async (v: boolean) => {
+    setDiscoverable(v);
+    const { error } = await supabase.from("profiles").update({ discoverable_by_contacts: v }).eq("id", user!.id);
+    if (error) { toast.error(error.message); setDiscoverable(!v); }
+    else toast.success(v ? "You're discoverable by contacts" : "Hidden from contact discovery");
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -118,6 +142,19 @@ function SettingsPage() {
               onChange={(v) => update("notifications", v)}
             />
           </Section>
+
+          {user && (
+            <Section icon={<Lock className="size-4 text-primary" />} title="Privacy" desc="Control how others can find you.">
+              <Toggle
+                label="Discoverable by contacts"
+                desc={hasPhone
+                  ? "Friends with your number in their contacts can find you on SideQuest."
+                  : "Add a phone number to your account to enable contact discovery."}
+                value={discoverable ?? false}
+                onChange={(v) => { if (hasPhone) toggleDiscoverable(v); else toast.info("Add a phone number first"); }}
+              />
+            </Section>
+          )}
         </div>
       </main>
       <SiteFooter />

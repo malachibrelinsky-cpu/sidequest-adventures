@@ -27,6 +27,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as MessagesIndexRouteImport } from './routes/messages.index'
 import { Route as UUserIdRouteImport } from './routes/u.$userId'
 import { Route as QuestChatQuestIdRouteImport } from './routes/quest-chat.$questId'
+import { Route as OnboardingContactsRouteImport } from './routes/onboarding.contacts'
 import { Route as MessagesUserIdRouteImport } from './routes/messages.$userId'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 
@@ -120,6 +121,11 @@ const QuestChatQuestIdRoute = QuestChatQuestIdRouteImport.update({
   path: '/quest-chat/$questId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingContactsRoute = OnboardingContactsRouteImport.update({
+  id: '/onboarding/contacts',
+  path: '/onboarding/contacts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MessagesUserIdRoute = MessagesUserIdRouteImport.update({
   id: '/messages/$userId',
   path: '/messages/$userId',
@@ -149,6 +155,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/messages/$userId': typeof MessagesUserIdRoute
+  '/onboarding/contacts': typeof OnboardingContactsRoute
   '/quest-chat/$questId': typeof QuestChatQuestIdRoute
   '/u/$userId': typeof UUserIdRoute
   '/messages/': typeof MessagesIndexRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/messages/$userId': typeof MessagesUserIdRoute
+  '/onboarding/contacts': typeof OnboardingContactsRoute
   '/quest-chat/$questId': typeof QuestChatQuestIdRoute
   '/u/$userId': typeof UUserIdRoute
   '/messages': typeof MessagesIndexRoute
@@ -194,6 +202,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/messages/$userId': typeof MessagesUserIdRoute
+  '/onboarding/contacts': typeof OnboardingContactsRoute
   '/quest-chat/$questId': typeof QuestChatQuestIdRoute
   '/u/$userId': typeof UUserIdRoute
   '/messages/': typeof MessagesIndexRoute
@@ -218,6 +227,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/checkout/return'
     | '/messages/$userId'
+    | '/onboarding/contacts'
     | '/quest-chat/$questId'
     | '/u/$userId'
     | '/messages/'
@@ -240,6 +250,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/checkout/return'
     | '/messages/$userId'
+    | '/onboarding/contacts'
     | '/quest-chat/$questId'
     | '/u/$userId'
     | '/messages'
@@ -262,6 +273,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/checkout/return'
     | '/messages/$userId'
+    | '/onboarding/contacts'
     | '/quest-chat/$questId'
     | '/u/$userId'
     | '/messages/'
@@ -285,6 +297,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   MessagesUserIdRoute: typeof MessagesUserIdRoute
+  OnboardingContactsRoute: typeof OnboardingContactsRoute
   QuestChatQuestIdRoute: typeof QuestChatQuestIdRoute
   UUserIdRoute: typeof UUserIdRoute
   MessagesIndexRoute: typeof MessagesIndexRoute
@@ -418,6 +431,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof QuestChatQuestIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding/contacts': {
+      id: '/onboarding/contacts'
+      path: '/onboarding/contacts'
+      fullPath: '/onboarding/contacts'
+      preLoaderRoute: typeof OnboardingContactsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/messages/$userId': {
       id: '/messages/$userId'
       path: '/messages/$userId'
@@ -453,6 +473,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   MessagesUserIdRoute: MessagesUserIdRoute,
+  OnboardingContactsRoute: OnboardingContactsRoute,
   QuestChatQuestIdRoute: QuestChatQuestIdRoute,
   UUserIdRoute: UUserIdRoute,
   MessagesIndexRoute: MessagesIndexRoute,
@@ -460,13 +481,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
