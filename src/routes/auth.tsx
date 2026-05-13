@@ -41,6 +41,10 @@ function AuthPage() {
   // Login phone toggle
   const [loginUsePhone, setLoginUsePhone] = useState(false);
 
+  // Signup consent
+  const [agreedTerms, setAgreedTerms] = useState(false);
+  const [allowContacts, setAllowContacts] = useState(false);
+
   const [loading, setLoading] = useState(false);
 
   useEffect(() => { if (user) navigate({ to: "/feed" }); }, [user, navigate]);
@@ -86,6 +90,7 @@ function AuthPage() {
     try {
       const nameOk = displayNameSchema.safeParse(displayName);
       if (!nameOk.success) { toast.error("Display name must be 2–50 chars"); return; }
+      if (!otpSent && !agreedTerms) { toast.error("Please agree to the Terms & Conditions"); return; }
 
       // Phone-only signup (or both → phase 2 below)
       if (method === "phone") {
@@ -102,7 +107,7 @@ function AuthPage() {
         } else {
           const { error } = await supabase.auth.verifyOtp({ phone: phoneE164!, token: otp.trim(), type: "sms" });
           if (error) throw error;
-          navigate({ to: "/onboarding/contacts" });
+          navigate({ to: allowContacts ? "/onboarding/contacts" : "/feed" });
         }
         return;
       }
@@ -132,12 +137,12 @@ function AuthPage() {
         }
 
         toast.success("Welcome to SideQuest!");
-        navigate({ to: "/onboarding/contacts" });
+        navigate({ to: allowContacts ? "/onboarding/contacts" : "/feed" });
       } else {
         // both → OTP verify of phone change
         const { error } = await supabase.auth.verifyOtp({ phone: phoneE164!, token: otp.trim(), type: "phone_change" });
         if (error) throw error;
-        navigate({ to: "/onboarding/contacts" });
+        navigate({ to: allowContacts ? "/onboarding/contacts" : "/feed" });
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Signup failed");
@@ -260,6 +265,37 @@ function AuthPage() {
                 <ShieldCheck className="size-3.5 text-primary shrink-0 mt-0.5" />
                 We use your phone to secure your account, help friends find you, and prevent spam. You can hide yourself from contact discovery anytime in Settings.
               </p>
+            )}
+
+            {!otpSent && (
+              <div className="space-y-2 pt-1">
+                <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={agreedTerms}
+                    onChange={(e) => setAgreedTerms(e.target.checked)}
+                    className="mt-0.5 size-4 rounded border-border accent-primary shrink-0"
+                    required
+                  />
+                  <span>
+                    I understand and agree to the{" "}
+                    <Link to="/terms" className="text-primary hover:underline">Terms & Conditions</Link>
+                    {" "}and{" "}
+                    <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allowContacts}
+                    onChange={(e) => setAllowContacts(e.target.checked)}
+                    className="mt-0.5 size-4 rounded border-border accent-primary shrink-0"
+                  />
+                  <span>
+                    <span className="font-medium text-foreground">Optional:</span> Allow SideQuest to access my contacts to find friends already on the app. Phone numbers are hashed locally — we never upload your contact list.
+                  </span>
+                </label>
+              </div>
             )}
 
             <button type="submit" disabled={loading}
