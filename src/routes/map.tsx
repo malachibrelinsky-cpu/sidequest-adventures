@@ -175,12 +175,20 @@ function MapPage() {
                   </div>
                 </div>
                 {selected.bio && <p className="text-sm text-muted-foreground mb-4">{selected.bio}</p>}
-                <Link
-                  to="/messages/$userId" params={{ userId: selected.id }}
-                  className="w-full rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground py-2.5 font-semibold text-sm hover:opacity-90 transition flex items-center justify-center gap-2"
-                >
-                  <MessageCircle className="size-4" /> Start a chat
-                </Link>
+                <div className="flex flex-col gap-2">
+                  <Link
+                    to="/u/$userId" params={{ userId: selected.id }}
+                    className="w-full rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground py-2.5 font-semibold text-sm hover:opacity-90 transition flex items-center justify-center gap-2"
+                  >
+                    View profile
+                  </Link>
+                  <Link
+                    to="/messages/$userId" params={{ userId: selected.id }}
+                    className="w-full rounded-full border border-border bg-card/60 py-2.5 font-semibold text-sm hover:border-primary transition flex items-center justify-center gap-2"
+                  >
+                    <MessageCircle className="size-4" /> Start a chat
+                  </Link>
+                </div>
               </div>
             ) : (
               <div className="space-y-2">
