@@ -230,7 +230,9 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           city: string | null
+          contacts_synced_at: string | null
           created_at: string
+          discoverable_by_contacts: boolean
           display_name: string
           id: string
           interests: string[] | null
@@ -239,13 +241,17 @@ export type Database = {
           lon_approx: number | null
           longitude: number | null
           map_color: string
+          phone_e164: string | null
+          phone_hash: string | null
           updated_at: string
         }
         Insert: {
           avatar_url?: string | null
           bio?: string | null
           city?: string | null
+          contacts_synced_at?: string | null
           created_at?: string
+          discoverable_by_contacts?: boolean
           display_name: string
           id: string
           interests?: string[] | null
@@ -254,13 +260,17 @@ export type Database = {
           lon_approx?: number | null
           longitude?: number | null
           map_color?: string
+          phone_e164?: string | null
+          phone_hash?: string | null
           updated_at?: string
         }
         Update: {
           avatar_url?: string | null
           bio?: string | null
           city?: string | null
+          contacts_synced_at?: string | null
           created_at?: string
+          discoverable_by_contacts?: boolean
           display_name?: string
           id?: string
           interests?: string[] | null
@@ -269,6 +279,8 @@ export type Database = {
           lon_approx?: number | null
           longitude?: number | null
           map_color?: string
+          phone_e164?: string | null
+          phone_hash?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -512,6 +524,14 @@ export type Database = {
     }
     Functions: {
       current_week_start_utc: { Args: never; Returns: string }
+      find_friends_by_phone_hashes: {
+        Args: { hashes: string[] }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          id: string
+        }[]
+      }
       get_my_location: {
         Args: never
         Returns: {
@@ -526,6 +546,14 @@ export type Database = {
           longitude: number
         }[]
       }
+      get_my_profile_phone: {
+        Args: never
+        Returns: {
+          contacts_synced_at: string
+          discoverable_by_contacts: boolean
+          phone_e164: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -533,6 +561,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      hash_phone: { Args: { _phone: string }; Returns: string }
       is_leaderboard_member: {
         Args: { _lb: string; _user: string }
         Returns: boolean
@@ -543,6 +572,7 @@ export type Database = {
       }
       is_user_premium: { Args: { _uid: string }; Returns: boolean }
       join_quest: { Args: { p_post_id: string }; Returns: undefined }
+      mark_contacts_synced: { Args: never; Returns: undefined }
       post_quest: {
         Args: {
           p_caption: string
