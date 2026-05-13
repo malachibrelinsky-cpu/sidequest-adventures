@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { useSettings, type Language, type DistanceUnit, type FontSize } from "@/hooks/use-settings";
-import { Accessibility, Globe, MapPin, Ruler, Bell, Type, RotateCcw, Lock } from "lucide-react";
+import { Accessibility, Globe, MapPin, Ruler, Bell, Type, RotateCcw, Lock, User as UserIcon, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { toE164 } from "@/lib/phone";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
