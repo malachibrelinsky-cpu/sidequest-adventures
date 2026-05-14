@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { watermarkImage } from "@/lib/watermark";
 
 export const MAX_CHAT_MEDIA_BYTES = 50 * 1024 * 1024; // 50 MB
 // Long-lived signed URL (~10 years). Bucket is private; access is gated by
