@@ -1082,7 +1082,8 @@ function ComposeUpdate({ onPosted }: { onPosted: () => void }) {
     setSubmitting(true);
     try {
       const urls: string[] = [];
-      for (const f of files) {
+      for (const original of files) {
+        const f = original.type.startsWith("image/") ? await watermarkImage(original) : original;
         const ext = (f.name.split(".").pop() ?? "jpg").toLowerCase();
         const path = `${user.id}/updates/${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await supabase.storage.from("post-images").upload(path, f, { contentType: f.type });
