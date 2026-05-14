@@ -29,9 +29,30 @@ const VID_RE = /\.(mp4|webm|mov|m4v|ogg)(\?.*)?$/i;
 
 export type ChatMediaKind = "image" | "video" | null;
 
+// Only render media that is hosted on our own Supabase storage. This prevents
+// a malicious sender from embedding a third-party tracking pixel that would
+// leak the recipient's IP / user-agent when the chat auto-renders the URL.
+function isTrustedStorageUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "https:") return false;
+    const supaUrl = (import.meta.env.VITE_SUPABASE_URL || "") as string;
+    let supaHost = "";
+    try { supaHost = new URL(supaUrl).host; } catch { supaHost = ""; }
+    // Accept the project's own Supabase host, and only storage paths.
+    const isSupabaseHost = supaHost && u.host === supaHost;
+    const isSupabaseDomain = u.host.endsWith(".supabase.co") || u.host.endsWith(".supabase.in");
+    if (!isSupabaseHost && !isSupabaseDomain) return false;
+    return u.pathname.startsWith("/storage/v1/");
+  } catch {
+    return false;
+  }
+}
+
 export function detectChatMedia(body: string): { url: string; kind: ChatMediaKind } | null {
   const trimmed = body.trim();
-  if (!/^https?:\/\/\S+$/.test(trimmed)) return null;
+  if (!/^https:\/\/\S+$/.test(trimmed)) return null;
+  if (!isTrustedStorageUrl(trimmed)) return null;
   if (IMG_RE.test(trimmed)) return { url: trimmed, kind: "image" };
   if (VID_RE.test(trimmed)) return { url: trimmed, kind: "video" };
   return null;
