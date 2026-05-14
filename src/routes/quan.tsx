@@ -41,7 +41,23 @@ function QuanPage() {
     (async () => {
       const { data } = await supabase.from("subscribers")
         .select("is_premium").eq("user_id", user.id).maybeSingle();
-      setIsPremium(!!data?.is_premium);
+      const premium = !!data?.is_premium;
+      setIsPremium(premium);
+      if (premium) {
+        const { data: history } = await supabase
+          .from("quan_messages")
+          .select("role, content, created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(40);
+        if (history?.length) {
+          setMessages(
+            history
+              .reverse()
+              .map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
+          );
+        }
+      }
     })();
   }, [user]);
 
