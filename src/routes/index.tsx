@@ -82,6 +82,8 @@ function Home() {
               alt="Friends laughing on a city adventure at dusk"
               width={1536}
               height={1024}
+              fetchPriority="high"
+              decoding="async"
               className="relative rounded-3xl border border-border shadow-2xl"
             />
           </div>
