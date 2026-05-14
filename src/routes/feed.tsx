@@ -664,7 +664,8 @@ function CompleteQuestModal({ post, onClose, onCompleted }: { post: Post; onClos
     setVerdict(null);
     try {
       const urls: string[] = [];
-      for (const f of files) {
+      for (const original of files) {
+        const f = original.type.startsWith("image/") ? await watermarkImage(original) : original;
         const ext = (f.name.split(".").pop() ?? "jpg").toLowerCase();
         const path = `${user.id}/evidence/${post.id}-${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await supabase.storage.from("post-images").upload(path, f, { contentType: f.type });
