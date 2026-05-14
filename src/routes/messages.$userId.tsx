@@ -6,6 +6,7 @@ import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
 import { Send, ArrowLeft, Paperclip } from "lucide-react";
 import { uploadChatMedia, detectChatMedia } from "@/lib/chat-media";
+import { VideoWithWatermark } from "@/components/VideoWithWatermark";
 
 export const Route = createFileRoute("/messages/$userId")({
   head: () => ({ meta: [{ title: "Chat — SideQuest" }] }),
