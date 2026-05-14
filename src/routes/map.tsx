@@ -9,8 +9,10 @@ import { MapPin, Navigation, Sparkles, MessageCircle, Trophy, Users, Clock } fro
 export const Route = createFileRoute("/map")({
   head: () => ({
     meta: [
-      { title: "Map — SideQuest" },
-      { name: "description", content: "Find SideQuest members near you on a live worldwide map." },
+      { title: "Live Map — SideQuest members and quests near you" },
+      { name: "description", content: "Explore SideQuest's live worldwide map to find members and joinable adventures happening near you right now." },
+      { property: "og:title", content: "Live Map — SideQuest members and quests near you" },
+      { property: "og:description", content: "See questers and active adventures near you on SideQuest's live worldwide map." },
     ],
     links: [
       { rel: "stylesheet", href: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" },

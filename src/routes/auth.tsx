@@ -10,7 +10,12 @@ import type { CountryCode } from "libphonenumber-js";
 import { sendPhoneOtp, verifyPhoneOtp, verifyAndAttachPhone } from "@/lib/phone-otp.functions";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({ meta: [{ title: "Join SideQuest" }, { name: "description", content: "Sign in or create your SideQuest account." }] }),
+  head: () => ({ meta: [
+    { title: "Sign in or join — SideQuest" },
+    { name: "description", content: "Create a free SideQuest account or sign in to join short, spontaneous adventures with locals near you." },
+    { property: "og:title", content: "Sign in or join — SideQuest" },
+    { property: "og:description", content: "Create a free SideQuest account or sign in to join short, spontaneous adventures with locals near you." },
+  ] }),
   component: AuthPage,
 });
 

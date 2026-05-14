@@ -13,6 +13,8 @@ export const Route = createFileRoute("/leaderboard")({
     meta: [
       { title: "Leaderboard — SideQuest" },
       { name: "description", content: "Earn points completing sidequests. Compete worldwide or with your private crew." },
+      { property: "og:title", content: "SideQuest Leaderboard — Top questers this week" },
+      { property: "og:description", content: "See top questers worldwide, build streaks, and rally your private crew on the SideQuest leaderboard." },
     ],
   }),
   component: LeaderboardPage,
