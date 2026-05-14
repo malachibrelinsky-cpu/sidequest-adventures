@@ -176,7 +176,7 @@ function QuestChatPage() {
                           <img src={media.url} alt="" className="max-h-80 w-full object-cover" />
                         </a>
                       ) : (
-                        <video src={media.url} controls playsInline className="max-h-80 w-full" />
+                        <VideoWithWatermark src={media.url} className="max-h-80 w-full" />
                       )}
                     </div>
                   ) : (
