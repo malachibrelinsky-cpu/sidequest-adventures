@@ -9,6 +9,7 @@ import { Heart, MessageCircle, Image as ImageIcon, Send, Trophy, Pencil, Trash2,
 import { z } from "zod";
 import { watermarkImage } from "@/lib/watermark";
 import { VideoWithWatermark } from "@/components/VideoWithWatermark";
+import { ImageWithWatermark } from "@/components/ImageWithWatermark";
 
 export const Route = createFileRoute("/feed")({
   head: () => ({ meta: [{ title: "Feed — SideQuest" }, { name: "description", content: "See photos from member adventures and share your own." }] }),
