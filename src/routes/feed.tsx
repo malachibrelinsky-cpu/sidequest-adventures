@@ -567,7 +567,7 @@ function PostCard({ post, onChange, currentUserId, distanceKm }: { post: Post; o
               {post.evidence_urls.slice(0, 6).map((url, i) => {
                 const isVideo = /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url);
                 return isVideo
-                  ? <video key={i} src={url} controls className="w-full aspect-square object-cover rounded" />
+                  ? <VideoWithWatermark key={i} src={url} className="w-full aspect-square object-cover rounded" />
                   : <img key={i} src={url} alt="" loading="lazy" className="w-full aspect-square object-cover rounded" />;
               })}
             </div>
