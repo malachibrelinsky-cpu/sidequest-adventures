@@ -15,7 +15,7 @@ const ipHits = new Map<string, number[]>();
 
 function getClientIp(): string {
   try {
-    const req = getWebRequest();
+    const req = getRequest();
     const h = req?.headers;
     const fwd =
       h?.get("cf-connecting-ip") ||
