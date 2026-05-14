@@ -6,6 +6,7 @@ import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
 import { Send, ArrowLeft, Paperclip } from "lucide-react";
 import { uploadChatMedia, detectChatMedia } from "@/lib/chat-media";
+import { VideoWithWatermark } from "@/components/VideoWithWatermark";
 
 export const Route = createFileRoute("/messages/$userId")({
   head: () => ({ meta: [{ title: "Chat — SideQuest" }] }),
@@ -128,7 +129,7 @@ function ChatPage() {
                           <img src={media.url} alt="" className="max-h-80 w-full object-cover" />
                         </a>
                       ) : (
-                        <video src={media.url} controls playsInline className="max-h-80 w-full" />
+                        <VideoWithWatermark src={media.url} className="max-h-80 w-full" />
                       )}
                     </div>
                   ) : (

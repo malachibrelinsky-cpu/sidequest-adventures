@@ -7,6 +7,8 @@ import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
 import { toast } from "sonner";
 import { Heart, MessageCircle, Image as ImageIcon, Send, Trophy, Pencil, Trash2, Check, X, RotateCw, RotateCcw, Crop as CropIcon, ZoomIn, ZoomOut, Users, MapPin, Clock, Sparkles, CheckCircle2, Upload, Filter, List, Map as MapIcon, AlignStartVertical } from "lucide-react";
 import { z } from "zod";
+import { watermarkImage } from "@/lib/watermark";
+import { VideoWithWatermark } from "@/components/VideoWithWatermark";
 
 export const Route = createFileRoute("/feed")({
   head: () => ({ meta: [{ title: "Feed — SideQuest" }, { name: "description", content: "See photos from member adventures and share your own." }] }),
@@ -565,7 +567,7 @@ function PostCard({ post, onChange, currentUserId, distanceKm }: { post: Post; o
               {post.evidence_urls.slice(0, 6).map((url, i) => {
                 const isVideo = /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url);
                 return isVideo
-                  ? <video key={i} src={url} controls className="w-full aspect-square object-cover rounded" />
+                  ? <VideoWithWatermark key={i} src={url} className="w-full aspect-square object-cover rounded" />
                   : <img key={i} src={url} alt="" loading="lazy" className="w-full aspect-square object-cover rounded" />;
               })}
             </div>
@@ -662,7 +664,8 @@ function CompleteQuestModal({ post, onClose, onCompleted }: { post: Post; onClos
     setVerdict(null);
     try {
       const urls: string[] = [];
-      for (const f of files) {
+      for (const original of files) {
+        const f = original.type.startsWith("image/") ? await watermarkImage(original) : original;
         const ext = (f.name.split(".").pop() ?? "jpg").toLowerCase();
         const path = `${user.id}/evidence/${post.id}-${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await supabase.storage.from("post-images").upload(path, f, { contentType: f.type });
@@ -712,7 +715,7 @@ function CompleteQuestModal({ post, onClose, onCompleted }: { post: Post; onClos
             {files.map((f, i) => {
               const url = URL.createObjectURL(f);
               return f.type.startsWith("video/")
-                ? <video key={i} src={url} className="w-full aspect-square object-cover rounded-lg bg-muted/30" />
+                ? <VideoWithWatermark key={i} src={url} controls={false} className="w-full aspect-square object-cover rounded-lg bg-muted/30" />
                 : <img key={i} src={url} alt="" className="w-full aspect-square object-cover rounded-lg bg-muted/30" />;
             })}
           </div>
@@ -1079,7 +1082,8 @@ function ComposeUpdate({ onPosted }: { onPosted: () => void }) {
     setSubmitting(true);
     try {
       const urls: string[] = [];
-      for (const f of files) {
+      for (const original of files) {
+        const f = original.type.startsWith("image/") ? await watermarkImage(original) : original;
         const ext = (f.name.split(".").pop() ?? "jpg").toLowerCase();
         const path = `${user.id}/updates/${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await supabase.storage.from("post-images").upload(path, f, { contentType: f.type });
