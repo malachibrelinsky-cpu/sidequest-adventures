@@ -11,10 +11,12 @@ export async function uploadChatMedia(file: File, userId: string): Promise<strin
   if (file.size > MAX_CHAT_MEDIA_BYTES) {
     throw new Error("File too large (max 50 MB)");
   }
-  const ext = file.name.split(".").pop()?.toLowerCase() || "bin";
+  // Burn the Sidequest watermark into images before upload (no-op for video).
+  const toUpload = file.type.startsWith("image/") ? await watermarkImage(file) : file;
+  const ext = toUpload.name.split(".").pop()?.toLowerCase() || "bin";
   const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const { error } = await supabase.storage.from("chat-media").upload(path, file, {
-    contentType: file.type || undefined,
+  const { error } = await supabase.storage.from("chat-media").upload(path, toUpload, {
+    contentType: toUpload.type || undefined,
     upsert: false,
   });
   if (error) throw error;
