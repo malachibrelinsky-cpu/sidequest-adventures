@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -6,10 +7,50 @@ import { sendSms, generateOtpCode, sha256Hex, randomPassword } from "./twilio.se
 
 const phoneSchema = z.string().regex(/^\+[1-9]\d{6,14}$/, "Invalid E.164 phone");
 
+// Per-IP in-memory rate limit. Worker isolates may be recycled, so this is
+// best-effort defense-in-depth on top of the per-phone DB cooldown.
+const IP_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const IP_MAX_REQUESTS = 5;
+const ipHits = new Map<string, number[]>();
+
+function getClientIp(): string {
+  try {
+    const req = getRequest();
+    const h = req?.headers;
+    const fwd =
+      h?.get("cf-connecting-ip") ||
+      h?.get("x-real-ip") ||
+      h?.get("x-forwarded-for") ||
+      "";
+    return fwd.split(",")[0]?.trim() || "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+function checkIpRateLimit(ip: string) {
+  const now = Date.now();
+  const arr = (ipHits.get(ip) ?? []).filter((t) => now - t < IP_WINDOW_MS);
+  if (arr.length >= IP_MAX_REQUESTS) {
+    throw new Error("Too many verification requests from your network. Try again later.");
+  }
+  arr.push(now);
+  ipHits.set(ip, arr);
+  if (ipHits.size > 5000) {
+    for (const [k, v] of ipHits) {
+      const filtered = v.filter((t) => now - t < IP_WINDOW_MS);
+      if (filtered.length === 0) ipHits.delete(k);
+      else ipHits.set(k, filtered);
+    }
+  }
+}
+
 export const sendPhoneOtp = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ phone: phoneSchema }).parse(input))
   .handler(async ({ data }) => {
     const phone = data.phone;
+
+    checkIpRateLimit(getClientIp());
 
     const { data: existing } = await supabaseAdmin
       .from("phone_otps")
@@ -19,7 +60,7 @@ export const sendPhoneOtp = createServerFn({ method: "POST" })
 
     if (existing) {
       const ageMs = Date.now() - new Date(existing.created_at as string).getTime();
-      if (ageMs < 30_000) throw new Error("Please wait a moment before requesting another code.");
+      if (ageMs < 60_000) throw new Error("Please wait a moment before requesting another code.");
     }
 
     const code = generateOtpCode();
