@@ -715,7 +715,7 @@ function CompleteQuestModal({ post, onClose, onCompleted }: { post: Post; onClos
             {files.map((f, i) => {
               const url = URL.createObjectURL(f);
               return f.type.startsWith("video/")
-                ? <video key={i} src={url} className="w-full aspect-square object-cover rounded-lg bg-muted/30" />
+                ? <VideoWithWatermark key={i} src={url} controls={false} className="w-full aspect-square object-cover rounded-lg bg-muted/30" />
                 : <img key={i} src={url} alt="" className="w-full aspect-square object-cover rounded-lg bg-muted/30" />;
             })}
           </div>
