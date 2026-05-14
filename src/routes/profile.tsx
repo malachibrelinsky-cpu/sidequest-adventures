@@ -9,7 +9,11 @@ import { computeBadges, computeStreak, bestEverStreak, flatBadges, formatCountdo
 import { Flame } from "lucide-react";
 
 export const Route = createFileRoute("/profile")({
-  head: () => ({ meta: [{ title: "My profile — SideQuest" }] }),
+  head: () => ({ meta: [
+    { title: "My profile — SideQuest" },
+    { name: "description", content: "Edit your SideQuest profile, interests, city, and map color to get matched with the right local adventures." },
+    { name: "robots", content: "noindex" },
+  ] }),
   component: ProfilePage,
 });
 

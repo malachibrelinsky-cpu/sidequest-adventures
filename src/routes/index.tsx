@@ -13,6 +13,31 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "SideQuest — Tiny adventures with people nearby" },
       { property: "og:description", content: "Connect with locals and embark on short, spontaneous adventures." },
     ],
+    links: [
+      { rel: "canonical", href: "https://sidequest-adventures.lovable.app/" },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "SideQuest",
+          url: "https://sidequest-adventures.lovable.app/",
+          logo: "https://sidequest-adventures.lovable.app/favicon.ico",
+          sameAs: [],
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "SideQuest",
+          url: "https://sidequest-adventures.lovable.app/",
+        }),
+      },
+    ],
   }),
   component: Home,
 });
@@ -57,6 +82,8 @@ function Home() {
               alt="Friends laughing on a city adventure at dusk"
               width={1536}
               height={1024}
+              fetchPriority="high"
+              decoding="async"
               className="relative rounded-3xl border border-border shadow-2xl"
             />
           </div>

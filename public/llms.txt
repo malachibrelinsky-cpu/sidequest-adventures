@@ -1,0 +1,19 @@
+# SideQuest
+
+> SideQuest matches you with locals for short, spontaneous adventures — coffee crawls, sunset hikes, trivia nights, and other tiny quests under three hours.
+
+## Pages
+
+- [Home](/): Overview of SideQuest and tonight's featured quests.
+- [How it works](/how-it-works): How matching, quests, and meetups work.
+- [Browse quests](/quests): Joinable sidequests near you.
+- [Map](/map): Live worldwide map of members and quests.
+- [Leaderboard](/leaderboard): Points, streaks, and crew competitions.
+- [Pricing](/pricing): Free Basic plan and $8.99/mo Premium.
+- [About](/about): The team and story behind SideQuest.
+- [Sign in / sign up](/auth): Create an account or log in.
+
+## Optional
+
+- [Privacy Policy](/privacy)
+- [Terms of Service](/terms)

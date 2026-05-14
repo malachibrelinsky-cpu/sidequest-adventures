@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as QuestsRouteImport } from './routes/quests'
 import { Route as QuanRouteImport } from './routes/quan'
@@ -34,6 +35,11 @@ import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -152,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
   '/settings': typeof SettingsRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/messages/$userId': typeof MessagesUserIdRoute
@@ -175,6 +182,7 @@ export interface FileRoutesByTo {
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
   '/settings': typeof SettingsRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/messages/$userId': typeof MessagesUserIdRoute
@@ -199,6 +207,7 @@ export interface FileRoutesById {
   '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
   '/settings': typeof SettingsRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/messages/$userId': typeof MessagesUserIdRoute
@@ -224,6 +233,7 @@ export interface FileRouteTypes {
     | '/quan'
     | '/quests'
     | '/settings'
+    | '/sitemap.xml'
     | '/terms'
     | '/checkout/return'
     | '/messages/$userId'
@@ -247,6 +257,7 @@ export interface FileRouteTypes {
     | '/quan'
     | '/quests'
     | '/settings'
+    | '/sitemap.xml'
     | '/terms'
     | '/checkout/return'
     | '/messages/$userId'
@@ -270,6 +281,7 @@ export interface FileRouteTypes {
     | '/quan'
     | '/quests'
     | '/settings'
+    | '/sitemap.xml'
     | '/terms'
     | '/checkout/return'
     | '/messages/$userId'
@@ -294,6 +306,7 @@ export interface RootRouteChildren {
   QuanRoute: typeof QuanRoute
   QuestsRoute: typeof QuestsRoute
   SettingsRoute: typeof SettingsRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   MessagesUserIdRoute: typeof MessagesUserIdRoute
@@ -310,6 +323,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -470,6 +490,7 @@ const rootRouteChildren: RootRouteChildren = {
   QuanRoute: QuanRoute,
   QuestsRoute: QuestsRoute,
   SettingsRoute: SettingsRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   MessagesUserIdRoute: MessagesUserIdRoute,

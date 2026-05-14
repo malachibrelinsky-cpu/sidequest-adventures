@@ -7,7 +7,13 @@ import { toast } from "sonner";
 import { Star, Flag, ShieldAlert } from "lucide-react";
 
 export const Route = createFileRoute("/u/$userId")({
-  head: () => ({ meta: [{ title: "Profile — SideQuest" }] }),
+  head: ({ params }) => ({ meta: [
+    { title: `Quester profile — SideQuest` },
+    { name: "description", content: "View this SideQuest member's adventures, ratings, and badges, then send a message or join a quest together." },
+    { property: "og:title", content: "Quester profile — SideQuest" },
+    { property: "og:description", content: "Adventures, ratings, and badges from a SideQuest member." },
+    { property: "og:url", content: `https://sidequest-adventures.lovable.app/u/${params.userId}` },
+  ] }),
   component: PublicProfilePage,
 });
 
