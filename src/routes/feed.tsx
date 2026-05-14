@@ -569,7 +569,7 @@ function PostCard({ post, onChange, currentUserId, distanceKm }: { post: Post; o
                 const isVideo = /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url);
                 return isVideo
                   ? <VideoWithWatermark key={i} src={url} className="w-full aspect-square object-cover rounded" />
-                  : <img key={i} src={url} alt="" loading="lazy" className="w-full aspect-square object-cover rounded" />;
+                  : <ImageWithWatermark key={i} src={url} className="w-full aspect-square object-cover rounded" />;
               })}
             </div>
           )}
@@ -578,7 +578,7 @@ function PostCard({ post, onChange, currentUserId, distanceKm }: { post: Post; o
       {post.image_urls.length > 0 && (
         <div className={`grid gap-1 ${post.image_urls.length === 1 ? "" : post.image_urls.length === 2 ? "grid-cols-2" : "grid-cols-2"}`}>
           {post.image_urls.map((url, i) => (
-            <img key={i} src={url} alt="" loading="lazy" className="w-full aspect-square object-cover" />
+            <ImageWithWatermark key={i} src={url} className="w-full aspect-square object-cover" />
           ))}
         </div>
       )}
