@@ -30,7 +30,6 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { user } = useAuth();
-  const { isPremium } = usePremium();
   const currentPath = useRouterState({ select: (router) => router.location.pathname });
   const [isMod, setIsMod] = useState(false);
 
@@ -42,13 +41,10 @@ export function AppSidebar() {
     });
   }, [user]);
 
-  const isActive = (url: string) => currentPath === url || currentPath.startsWith(url + "/");
+  const isActive = (url: string) =>
+    url === "/" ? currentPath === "/" : currentPath === url || currentPath.startsWith(url + "/");
 
-  const visible = items.filter((i) => {
-    if (i.authOnly && !user) return false;
-    if (i.premiumHide && isPremium) return false;
-    return true;
-  });
+  const visible = items.filter((i) => !(i.authOnly && !user));
 
   return (
     <Sidebar collapsible="icon">
