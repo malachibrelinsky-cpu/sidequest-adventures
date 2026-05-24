@@ -58,7 +58,7 @@ function InboxPage() {
             <MessageCircle className="size-10 text-primary mx-auto mb-3" />
             <p className="font-semibold mb-1">No chats yet</p>
             <p className="text-sm text-muted-foreground mb-5">Find someone on the map and send the first message.</p>
-            <Link to="/map" className="inline-block rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-5 py-2.5 font-semibold text-sm hover:opacity-90 transition">
+            <Link to="/" className="inline-block rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-5 py-2.5 font-semibold text-sm hover:opacity-90 transition">
               Open the map
             </Link>
           </div>
