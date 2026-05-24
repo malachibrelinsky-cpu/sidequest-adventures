@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Compass, MessageSquare, Map, Trophy, Sparkles, Settings, Crown, Newspaper, ShieldCheck } from "lucide-react";
+import { Compass, MessageSquare, Map, Trophy, Settings, Newspaper, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Sidebar,
