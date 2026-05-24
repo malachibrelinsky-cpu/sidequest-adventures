@@ -13,12 +13,10 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as QuestsRouteImport } from './routes/quests'
-import { Route as QuanRouteImport } from './routes/quan'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ModerationRouteImport } from './routes/moderation'
-import { Route as MapRouteImport } from './routes/map'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as FeedRouteImport } from './routes/feed'
@@ -52,11 +50,6 @@ const QuestsRoute = QuestsRouteImport.update({
   path: '/quests',
   getParentRoute: () => rootRouteImport,
 } as any)
-const QuanRoute = QuanRouteImport.update({
-  id: '/quan',
-  path: '/quan',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -75,11 +68,6 @@ const PricingRoute = PricingRouteImport.update({
 const ModerationRoute = ModerationRouteImport.update({
   id: '/moderation',
   path: '/moderation',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MapRoute = MapRouteImport.update({
-  id: '/map',
-  path: '/map',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LeaderboardRoute = LeaderboardRouteImport.update({
@@ -150,12 +138,10 @@ export interface FileRoutesByFullPath {
   '/feed': typeof FeedRoute
   '/how-it-works': typeof HowItWorksRoute
   '/leaderboard': typeof LeaderboardRoute
-  '/map': typeof MapRoute
   '/moderation': typeof ModerationRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
-  '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -174,12 +160,10 @@ export interface FileRoutesByTo {
   '/feed': typeof FeedRoute
   '/how-it-works': typeof HowItWorksRoute
   '/leaderboard': typeof LeaderboardRoute
-  '/map': typeof MapRoute
   '/moderation': typeof ModerationRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
-  '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -199,12 +183,10 @@ export interface FileRoutesById {
   '/feed': typeof FeedRoute
   '/how-it-works': typeof HowItWorksRoute
   '/leaderboard': typeof LeaderboardRoute
-  '/map': typeof MapRoute
   '/moderation': typeof ModerationRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/profile': typeof ProfileRoute
-  '/quan': typeof QuanRoute
   '/quests': typeof QuestsRoute
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -225,12 +207,10 @@ export interface FileRouteTypes {
     | '/feed'
     | '/how-it-works'
     | '/leaderboard'
-    | '/map'
     | '/moderation'
     | '/pricing'
     | '/privacy'
     | '/profile'
-    | '/quan'
     | '/quests'
     | '/settings'
     | '/sitemap.xml'
@@ -249,12 +229,10 @@ export interface FileRouteTypes {
     | '/feed'
     | '/how-it-works'
     | '/leaderboard'
-    | '/map'
     | '/moderation'
     | '/pricing'
     | '/privacy'
     | '/profile'
-    | '/quan'
     | '/quests'
     | '/settings'
     | '/sitemap.xml'
@@ -273,12 +251,10 @@ export interface FileRouteTypes {
     | '/feed'
     | '/how-it-works'
     | '/leaderboard'
-    | '/map'
     | '/moderation'
     | '/pricing'
     | '/privacy'
     | '/profile'
-    | '/quan'
     | '/quests'
     | '/settings'
     | '/sitemap.xml'
@@ -298,12 +274,10 @@ export interface RootRouteChildren {
   FeedRoute: typeof FeedRoute
   HowItWorksRoute: typeof HowItWorksRoute
   LeaderboardRoute: typeof LeaderboardRoute
-  MapRoute: typeof MapRoute
   ModerationRoute: typeof ModerationRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProfileRoute: typeof ProfileRoute
-  QuanRoute: typeof QuanRoute
   QuestsRoute: typeof QuestsRoute
   SettingsRoute: typeof SettingsRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -346,13 +320,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof QuestsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/quan': {
-      id: '/quan'
-      path: '/quan'
-      fullPath: '/quan'
-      preLoaderRoute: typeof QuanRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/profile': {
       id: '/profile'
       path: '/profile'
@@ -379,13 +346,6 @@ declare module '@tanstack/react-router' {
       path: '/moderation'
       fullPath: '/moderation'
       preLoaderRoute: typeof ModerationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/map': {
-      id: '/map'
-      path: '/map'
-      fullPath: '/map'
-      preLoaderRoute: typeof MapRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/leaderboard': {
@@ -482,12 +442,10 @@ const rootRouteChildren: RootRouteChildren = {
   FeedRoute: FeedRoute,
   HowItWorksRoute: HowItWorksRoute,
   LeaderboardRoute: LeaderboardRoute,
-  MapRoute: MapRoute,
   ModerationRoute: ModerationRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProfileRoute: ProfileRoute,
-  QuanRoute: QuanRoute,
   QuestsRoute: QuestsRoute,
   SettingsRoute: SettingsRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

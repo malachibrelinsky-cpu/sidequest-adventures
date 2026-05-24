@@ -1,8 +1,5 @@
 project_id = "rhdusdelxdluabcbeuwr"
 
-[functions.quan-chat]
-verify_jwt = false
-
 [functions.screen-quest-completion]
 verify_jwt = true
 

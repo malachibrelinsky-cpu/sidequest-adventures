@@ -1,157 +1,352 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useEffect, useState, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/SiteHeader";
-import heroImg from "@/assets/hero.jpg";
-import mapImg from "@/assets/map.jpg";
-import connectImg from "@/assets/connect.jpg";
-import { MapPin, Users, Sparkles, Clock, Zap, Coffee } from "lucide-react";
+import { toast } from "sonner";
+import { MapPin, Navigation, Sparkles, MessageCircle, Trophy, Users, Clock } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "SideQuest — Tiny adventures with people nearby" },
-      { name: "description", content: "Connect with locals and embark on short, spontaneous adventures. Coffee crawls, sunset hikes, trivia nights — your next side quest is around the corner." },
-      { property: "og:title", content: "SideQuest — Tiny adventures with people nearby" },
-      { property: "og:description", content: "Connect with locals and embark on short, spontaneous adventures." },
+      { title: "SideQuest — Live map of members and quests near you" },
+      { name: "description", content: "Explore SideQuest's live worldwide map to find members and joinable adventures happening near you right now." },
+      { property: "og:title", content: "SideQuest — Live map of members and quests near you" },
+      { property: "og:description", content: "See questers and active adventures near you on SideQuest's live worldwide map." },
     ],
     links: [
       { rel: "canonical", href: "https://sidequest-adventures.lovable.app/" },
-    ],
-    scripts: [
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "Organization",
-          name: "SideQuest",
-          url: "https://sidequest-adventures.lovable.app/",
-          logo: "https://sidequest-adventures.lovable.app/favicon.ico",
-          sameAs: [],
-        }),
-      },
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "WebSite",
-          name: "SideQuest",
-          url: "https://sidequest-adventures.lovable.app/",
-        }),
-      },
+      { rel: "stylesheet", href: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" },
     ],
   }),
-  component: Home,
+  component: MapPage,
 });
 
-function Home() {
+type Member = {
+  id: string; display_name: string; avatar_url: string | null;
+  city: string | null; bio: string | null;
+  latitude: number | null; longitude: number | null;
+  map_color: string | null;
+};
+
+type Quest = {
+  id: string; caption: string | null; location: string | null;
+  difficulty: string | null; points: number | null;
+  participants_needed: number | null; quest_time: string | null;
+  latitude: number; longitude: number;
+  profiles: { display_name: string; avatar_url: string | null } | null;
+};
+
+function MapPage() {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const [members, setMembers] = useState<Member[]>([]);
+  const [me, setMe] = useState<Member | null>(null);
+  const [savingLoc, setSavingLoc] = useState(false);
+  const [selected, setSelected] = useState<Member | null>(null);
+  const [quests, setQuests] = useState<Quest[]>([]);
+  const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
+
+  useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
+
+  const load = async () => {
+    if (!user) return;
+    const { data } = await supabase.from("profiles").select("id, display_name, avatar_url, city, bio, lat_approx, lon_approx, map_color");
+    const list = ((data ?? []) as Array<Omit<Member, "latitude" | "longitude"> & { lat_approx: number | null; lon_approx: number | null }>).map((m) => ({
+      id: m.id, display_name: m.display_name, avatar_url: m.avatar_url, city: m.city, bio: m.bio,
+      map_color: m.map_color, latitude: m.lat_approx, longitude: m.lon_approx,
+    })) as Member[];
+    setMembers(list.filter((m) => m.id !== user.id && m.latitude != null && m.longitude != null));
+    setMe(list.find((m) => m.id === user.id) ?? null);
+
+    const { data: qData } = await supabase
+      .from("posts")
+      .select("id, caption, location, difficulty, points, participants_needed, quest_time, lat_approx, lon_approx, profiles!posts_user_id_fkey(display_name, avatar_url)")
+      .not("difficulty", "is", null)
+      .not("lat_approx", "is", null)
+      .is("completed_at", null)
+      .order("created_at", { ascending: false });
+    setQuests(((qData ?? []) as unknown as Array<Omit<Quest, "latitude" | "longitude"> & { lat_approx: number; lon_approx: number }>).map((q) => ({
+      ...q, latitude: q.lat_approx, longitude: q.lon_approx,
+    })) as Quest[]);
+  };
+  useEffect(() => { if (user) load(); }, [user]);
+
+  const useGPS = () => {
+    if (!navigator.geolocation) { toast.error("Geolocation not supported"); return; }
+    setSavingLoc(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        let cityName: string | null = null;
+        try {
+          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&zoom=10`);
+          const j = await r.json();
+          cityName = j.address?.city || j.address?.town || j.address?.village || j.address?.state || j.address?.country || null;
+        } catch {}
+        const update: { latitude: number; longitude: number; city?: string } = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        };
+        if (cityName) update.city = cityName;
+        const { error } = await supabase.from("profiles").update(update).eq("id", user!.id);
+        setSavingLoc(false);
+        if (error) toast.error(error.message);
+        else { toast.success(cityName ? `Located in ${cityName}` : "Location updated"); load(); }
+      },
+      (err) => { setSavingLoc(false); toast.error(err.message); },
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  };
+
+  const searchCity = async (query: string) => {
+    if (!query.trim() || !user) return;
+    setSavingLoc(true);
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`);
+      const j = await r.json();
+      if (!j[0]) { toast.error("City not found"); setSavingLoc(false); return; }
+      const { error } = await supabase.from("profiles").update({
+        city: query.trim(),
+        latitude: parseFloat(j[0].lat),
+        longitude: parseFloat(j[0].lon),
+      }).eq("id", user.id);
+      if (error) toast.error(error.message);
+      else { toast.success(`Located in ${query}`); load(); }
+    } catch { toast.error("Geocoding failed"); }
+    setSavingLoc(false);
+  };
+
+  if (loading || !user) return <div className="min-h-screen grid place-items-center text-muted-foreground">Loading…</div>;
+
   return (
     <div className="min-h-screen">
       <SiteHeader />
-      <main className="mx-auto max-w-7xl px-6">
-        {/* Hero */}
-        <section className="pt-16 pb-20 grid lg:grid-cols-2 gap-12 items-center">
-          <div className="space-y-6">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-1.5 text-xs font-medium text-primary">
-              <Sparkles className="size-3.5" /> Now live in 24 cities
-            </div>
-            <h1 className="text-5xl md:text-7xl font-bold leading-[0.95]">
-              Your next <span className="text-gradient-mint">side quest</span> starts two blocks away.
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-xl">
-              SideQuest matches you with locals for short, fun adventures — under three hours, zero awkward small talk, infinite stories.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Link to="/quests" className="rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-6 py-3 font-semibold shadow-[0_0_40px_-8px_var(--mint)] hover:opacity-90 transition">
-                Browse tonight's quests
-              </Link>
-              <Link to="/how-it-works" className="rounded-full border border-border bg-card/60 px-6 py-3 font-semibold hover:border-primary transition">
-                How it works
-              </Link>
-            </div>
-            <div className="flex items-center gap-6 pt-4 text-sm text-muted-foreground">
-              <div><span className="text-foreground font-bold text-2xl">12k+</span><br/>questers</div>
-              <div className="h-10 w-px bg-border" />
-              <div><span className="text-foreground font-bold text-2xl">3.2k</span><br/>quests/month</div>
-              <div className="h-10 w-px bg-border" />
-              <div><span className="text-foreground font-bold text-2xl">4.9★</span><br/>rated</div>
-            </div>
+      <main className="mx-auto max-w-7xl px-6 py-10">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-primary font-semibold text-sm mb-2">LIVE MAP</p>
+            <h1 className="text-4xl md:text-5xl font-bold">Questers worldwide</h1>
+            <p className="text-muted-foreground mt-2">Real GPS, real cities. Tap a pin to start a chat or join a quest.</p>
           </div>
-          <div className="relative">
-            <div className="absolute -inset-6 bg-gradient-to-tr from-primary/30 to-accent/20 blur-3xl rounded-full" />
-            <img
-              src={heroImg}
-              alt="Friends laughing on a city adventure at dusk"
-              width={1536}
-              height={1024}
-              fetchPriority="high"
-              decoding="async"
-              className="relative rounded-3xl border border-border shadow-2xl"
-            />
-          </div>
-        </section>
+          <LocationControls onGPS={useGPS} onCity={searchCity} saving={savingLoc} />
+        </div>
 
-        {/* Bento */}
-        <section className="py-16">
-          <div className="flex items-end justify-between mb-10">
-            <h2 className="text-4xl md:text-5xl font-bold max-w-xl">Small adventures.<br/><span className="text-gradient-mint">Big stories.</span></h2>
-            <p className="hidden md:block text-muted-foreground max-w-sm">Everything you need to turn a Tuesday night into the story you'll tell on Friday.</p>
+        <div className="grid lg:grid-cols-[1fr_320px] gap-5">
+          <div className="bento-card relative aspect-[4/3] lg:aspect-auto lg:min-h-[600px] overflow-hidden p-0">
+            <LeafletMap me={me} members={members} quests={quests} onSelect={(m) => { setSelected(m); setSelectedQuest(null); }} onSelectQuest={(q) => { setSelectedQuest(q); setSelected(null); }} />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 auto-rows-[220px]">
-            <div className="bento-card bento-card-hover p-7 md:row-span-2 md:col-span-2 relative overflow-hidden">
-              <img src={mapImg} alt="Map of nearby quests" loading="lazy" width={1024} height={1024}
-                className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-luminosity" />
-              <div className="relative z-10 h-full flex flex-col justify-end">
-                <MapPin className="size-7 text-primary mb-3" />
-                <h3 className="text-3xl font-bold mb-2">Hyperlocal by design</h3>
-                <p className="text-muted-foreground max-w-md">Every quest is within 15 minutes of you. No commutes, no excuses.</p>
+          <aside className="bento-card p-5 space-y-4">
+            <div className="flex items-center gap-2 text-sm text-primary font-semibold">
+              <Sparkles className="size-4" /> {members.length} questers · {quests.length} active quests
+            </div>
+            {selectedQuest ? (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Trophy className="size-4 text-primary" />
+                  <p className="text-xs uppercase tracking-wide text-primary font-bold">{selectedQuest.difficulty} · {selectedQuest.points} pts</p>
+                </div>
+                <p className="font-bold mb-2 line-clamp-3">{selectedQuest.caption || "Sidequest"}</p>
+                {selectedQuest.location && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1"><MapPin className="size-3" />{selectedQuest.location}</p>
+                )}
+                {selectedQuest.quest_time && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1"><Clock className="size-3" />{new Date(selectedQuest.quest_time).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</p>
+                )}
+                {selectedQuest.participants_needed != null && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mb-3"><Users className="size-3" />Needs {selectedQuest.participants_needed}</p>
+                )}
+                {selectedQuest.profiles && (
+                  <p className="text-xs text-muted-foreground mb-3">Hosted by {selectedQuest.profiles.display_name}</p>
+                )}
+                <Link to="/feed" className="w-full rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground py-2.5 font-semibold text-sm hover:opacity-90 transition flex items-center justify-center gap-2">
+                  View in feed
+                </Link>
               </div>
-            </div>
-
-            <div className="bento-card bento-card-hover p-7">
-              <Clock className="size-7 text-primary mb-3" />
-              <h3 className="text-xl font-bold mb-1">Under 3 hours</h3>
-              <p className="text-sm text-muted-foreground">Real life still happens. Quests fit between dinner and bedtime.</p>
-            </div>
-
-            <div className="bento-card bento-card-hover p-7">
-              <Users className="size-7 text-primary mb-3" />
-              <h3 className="text-xl font-bold mb-1">Tiny groups</h3>
-              <p className="text-sm text-muted-foreground">2–6 people. Big enough for energy, small enough for actual conversation.</p>
-            </div>
-
-            <div className="bento-card bento-card-hover p-7 md:col-span-2 relative overflow-hidden">
-              <img src={connectImg} alt="Two people high-fiving" loading="lazy" width={1024} height={1024}
-                className="absolute right-0 top-0 h-full w-1/2 object-cover opacity-60 [mask-image:linear-gradient(to_left,black,transparent)]" />
-              <div className="relative z-10 max-w-sm">
-                <Zap className="size-7 text-primary mb-3" />
-                <h3 className="text-2xl font-bold mb-2">Show up, click instantly</h3>
-                <p className="text-muted-foreground">Our match score blends interests, vibe, and shared weirdness so the chemistry is there before you say hi.</p>
+            ) : selected ? (
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="size-14 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground font-bold overflow-hidden">
+                    {selected.avatar_url
+                      ? <img src={selected.avatar_url} alt="" className="w-full h-full object-cover" />
+                      : selected.display_name[0]?.toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-bold">{selected.display_name}</p>
+                    {selected.city && <p className="text-xs text-muted-foreground">{selected.city}</p>}
+                  </div>
+                </div>
+                {selected.bio && <p className="text-sm text-muted-foreground mb-4">{selected.bio}</p>}
+                <div className="flex flex-col gap-2">
+                  <Link
+                    to="/u/$userId" params={{ userId: selected.id }}
+                    className="w-full rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground py-2.5 font-semibold text-sm hover:opacity-90 transition flex items-center justify-center gap-2"
+                  >
+                    View profile
+                  </Link>
+                  <Link
+                    to="/messages/$userId" params={{ userId: selected.id }}
+                    className="w-full rounded-full border border-border bg-card/60 py-2.5 font-semibold text-sm hover:border-primary transition flex items-center justify-center gap-2"
+                  >
+                    <MessageCircle className="size-4" /> Start a chat
+                  </Link>
+                </div>
               </div>
-            </div>
-
-            <div className="bento-card bento-card-hover p-7">
-              <Coffee className="size-7 text-primary mb-3" />
-              <h3 className="text-xl font-bold mb-1">Any vibe</h3>
-              <p className="text-sm text-muted-foreground">Coffee crawls, kayak races, bookstore scavenger hunts, karaoke dives.</p>
-            </div>
-          </div>
-        </section>
-
-        {/* CTA */}
-        <section className="py-20">
-          <div className="bento-card p-12 md:p-16 text-center relative overflow-hidden">
-            <div className="absolute -top-24 left-1/2 -translate-x-1/2 size-[500px] bg-primary/20 blur-3xl rounded-full" />
-            <div className="relative">
-              <h2 className="text-4xl md:text-6xl font-bold mb-4">Tonight is just sitting there.</h2>
-              <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">Pick a quest. Meet two strangers who won't be strangers by 10pm.</p>
-              <Link to="/quests" className="inline-flex rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-8 py-4 font-semibold text-lg shadow-[0_0_60px_-10px_var(--mint)] hover:opacity-90 transition">
-                Find a quest →
-              </Link>
-            </div>
-          </div>
-        </section>
+            ) : (
+              <div className="space-y-2">
+                {quests.length > 0 && (
+                  <>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold pt-1">Active quests</p>
+                    {quests.slice(0, 5).map((q) => (
+                      <button key={q.id} onClick={() => setSelectedQuest(q)}
+                        className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/40 transition text-left">
+                        <div className="size-9 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground">
+                          <Trophy className="size-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate">{q.caption || "Sidequest"}</p>
+                          {q.location && <p className="text-xs text-muted-foreground truncate">{q.location} · {q.points} pts</p>}
+                        </div>
+                      </button>
+                    ))}
+                  </>
+                )}
+                {members.length === 0 && quests.length === 0 && <p className="text-sm text-muted-foreground">No one's on the map yet — set your location or invite a friend.</p>}
+                {members.length > 0 && (
+                  <>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold pt-3">Questers</p>
+                    {members.slice(0, 6).map((m) => (
+                      <button key={m.id} onClick={() => setSelected(m)}
+                        className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/40 transition text-left">
+                        <div className="size-9 rounded-full bg-gradient-to-br from-primary to-accent grid place-items-center text-primary-foreground text-sm font-bold overflow-hidden">
+                          {m.avatar_url ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover"/> : m.display_name[0]?.toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate">{m.display_name}</p>
+                          {m.city && <p className="text-xs text-muted-foreground truncate">{m.city}</p>}
+                        </div>
+                      </button>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+          </aside>
+        </div>
       </main>
       <SiteFooter />
     </div>
   );
+}
+
+function LocationControls({ onGPS, onCity, saving }: { onGPS: () => void; onCity: (q: string) => void; saving: boolean }) {
+  const [city, setCity] = useState("");
+  return (
+    <div className="flex flex-wrap gap-2">
+      <button onClick={onGPS} disabled={saving}
+        className="rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground px-5 py-2.5 font-semibold text-sm flex items-center gap-2 disabled:opacity-50 hover:opacity-90 transition">
+        <Navigation className="size-4" /> Use my GPS
+      </button>
+      <form
+        onSubmit={(e) => { e.preventDefault(); onCity(city); setCity(""); }}
+        className="flex items-center gap-2 bento-card px-3 py-1"
+      >
+        <input
+          value={city} onChange={(e) => setCity(e.target.value)} maxLength={100}
+          placeholder="search city worldwide…"
+          className="bg-transparent outline-none text-sm w-44 sm:w-56 py-1.5"
+        />
+        <button type="submit" disabled={saving || !city.trim()}
+          className="text-primary text-sm font-semibold disabled:opacity-50">Go</button>
+      </form>
+    </div>
+  );
+}
+
+function LeafletMap({ me, members, quests, onSelect, onSelectQuest }: { me: Member | null; members: Member[]; quests: Quest[]; onSelect: (m: Member) => void; onSelectQuest: (q: Quest) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  const layerRef = useRef<any>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const L = (await import("leaflet")).default;
+      if (cancelled || !ref.current) return;
+      if (!mapRef.current) {
+        const center: [number, number] = me?.latitude != null && me.longitude != null
+          ? [me.latitude, me.longitude]
+          : [20, 0];
+        const zoom = me?.latitude != null ? 11 : 2;
+        mapRef.current = L.map(ref.current, { zoomControl: true, attributionControl: false }).setView(center, zoom);
+        L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+          maxZoom: 19,
+        }).addTo(mapRef.current);
+        layerRef.current = L.layerGroup().addTo(mapRef.current);
+      }
+      setReady(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    (async () => {
+      const L = (await import("leaflet")).default;
+      if (!layerRef.current) return;
+      layerRef.current.clearLayers();
+
+      const RADIUS_M = 4023.36;
+      const DEFAULT_COLOR = "#2dd4a8";
+      const offsetFor = (seed: string, lat: number) => {
+        let h = 0;
+        for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
+        const a = ((h & 0xffff) / 0xffff) * Math.PI * 2;
+        const r = (((h >>> 16) & 0xffff) / 0xffff) * 0.6 + 0.3;
+        const dMeters = RADIUS_M * r;
+        const dLat = (dMeters * Math.cos(a)) / 111320;
+        const dLon = (dMeters * Math.sin(a)) / (111320 * Math.cos((lat * Math.PI) / 180));
+        return [dLat, dLon] as const;
+      };
+      const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+      const addUserCircle = (lat: number, lon: number, label: string, isMe: boolean, color: string, seed: string, onClick?: () => void) => {
+        const [dLat, dLon] = offsetFor(seed, lat);
+        const circle = L.circle([lat + dLat, lon + dLon], {
+          radius: RADIUS_M,
+          color,
+          weight: 2,
+          opacity: 0.75,
+          fillColor: color,
+          fillOpacity: isMe ? 0.22 : 0.14,
+        }).bindTooltip(label, { direction: "top", sticky: true });
+        if (onClick) circle.on("click", onClick);
+        circle.addTo(layerRef.current);
+      };
+
+      const questMarker = (points: number | null) => {
+        const html = `<div style="position:relative;width:44px;height:54px;filter:drop-shadow(0 2px 8px rgba(255,180,60,.6))"><div style="position:absolute;top:0;left:0;width:44px;height:44px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:linear-gradient(135deg,#fbbf24,#f97316);border:2px solid #0d1b2a"></div><div style="position:absolute;top:8px;left:8px;width:28px;height:28px;border-radius:9999px;background:#0d1b2a;display:grid;place-items:center;color:#fbbf24;font-weight:800;font-size:10px">${points ?? "★"}</div></div>`;
+        return L.divIcon({ html, className: "", iconSize: [44, 54], iconAnchor: [22, 50] });
+      };
+
+      if (me?.latitude != null && me.longitude != null) {
+        addUserCircle(me.latitude, me.longitude, "You (approx. area)", true, me.map_color || DEFAULT_COLOR, me.id);
+      }
+      members.forEach((m) => {
+        addUserCircle(m.latitude!, m.longitude!, `${escapeHtml(m.display_name)} · approx. area`, false, m.map_color || DEFAULT_COLOR, m.id, () => onSelect(m));
+      });
+      quests.forEach((q) => {
+        const marker = L.marker([q.latitude, q.longitude], { icon: questMarker(q.points) })
+          .bindTooltip(escapeHtml(q.caption || "Sidequest"), { direction: "top" })
+          .on("click", () => onSelectQuest(q));
+        marker.addTo(layerRef.current);
+      });
+
+      if (me?.latitude != null && me.longitude != null) {
+        mapRef.current?.setView([me.latitude, me.longitude], 11);
+      }
+    })();
+  }, [me, members, quests, ready, onSelect, onSelectQuest]);
+
+  return <div ref={ref} className="absolute inset-0 rounded-3xl" />;
 }
