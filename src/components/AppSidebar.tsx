@@ -60,26 +60,19 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {visible.map((item) => {
-                const premium = item.title === "Go Premium";
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
-                      <Link to={item.url} className="flex items-center gap-2">
-                        <item.icon className={`size-4 ${premium ? "text-primary" : ""}`} />
-                        {!collapsed && (
-                          <span className={`flex-1 ${premium ? "font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent" : ""}`}>
-                            {item.title}
-                          </span>
-                        )}
-                        {!collapsed && item.badge && (
-                          <span className="text-[10px] uppercase tracking-wider rounded bg-primary/20 text-primary px-1.5 py-0.5 font-bold">{item.badge}</span>
-                        )}
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {visible.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
+                    <Link to={item.url} className="flex items-center gap-2">
+                      <item.icon className="size-4" />
+                      {!collapsed && <span className="flex-1">{item.title}</span>}
+                      {!collapsed && item.badge && (
+                        <span className="text-[10px] uppercase tracking-wider rounded bg-primary/20 text-primary px-1.5 py-0.5 font-bold">{item.badge}</span>
+                      )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
               {isMod && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive("/moderation")} tooltip="Moderation">
