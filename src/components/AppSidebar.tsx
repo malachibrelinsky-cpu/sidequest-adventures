@@ -13,20 +13,17 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
-import { usePremium } from "@/hooks/use-premium";
 import { supabase } from "@/integrations/supabase/client";
 
-type Item = { title: string; url: string; icon: React.ComponentType<{ className?: string }>; authOnly?: boolean; premiumHide?: boolean; badge?: string };
+type Item = { title: string; url: string; icon: React.ComponentType<{ className?: string }>; authOnly?: boolean; badge?: string };
 
 const items: Item[] = [
+  { title: "Map", url: "/", icon: Map },
   { title: "Sidequests", url: "/quests", icon: Compass },
   { title: "Feed", url: "/feed", icon: Newspaper },
-  { title: "Map", url: "/map", icon: Map },
   { title: "Messages", url: "/messages", icon: MessageSquare, authOnly: true },
   { title: "Leaderboard", url: "/leaderboard", icon: Trophy, authOnly: true },
-  { title: "Quan AI", url: "/quan", icon: Sparkles, authOnly: true, badge: "AI" },
   { title: "Settings", url: "/settings", icon: Settings },
-  { title: "Go Premium", url: "/pricing", icon: Crown, premiumHide: true },
 ];
 
 export function AppSidebar() {
